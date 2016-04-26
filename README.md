@@ -13,10 +13,12 @@ Download [Adventure Works 2014 OLTP Script](https://msftdbprodsamples.codeplex.c
 Extract the .zip and copy all of the CSV files into the same folder, also containing update_csvs.rb file and install.sql.
 
 Modify the CSVs to work with Postgres by running:
-```ruby update_csvs.rb
+```
+ruby update_csvs.rb
 ```
 Create the database and tables, import the data, and set up the views and keys with:
-```psql -c "CREATE DATABASE \"Adventureworks\";"
+```
+psql -c "CREATE DATABASE \"Adventureworks\";"
 psql -d Adventureworks < install.sql
 ```
 The Production.ProductReview table gets omitted, but the remaining 67 tables are properly set up.

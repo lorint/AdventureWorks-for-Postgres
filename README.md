@@ -1,11 +1,11 @@
-# AdventureWorks-for-Postgres
-###  by Lorin Thwaits
+# AdventureWorks for Postgres
 
-This consists of a ruby file to convert the CSVs into a format usable by Postgres,
-as well as a Postgres script to create the tables, load the data, add primary and
-foreign keys, and create some of the views used by Adventureworks.
+This consists of a ruby file to convert CSVs provided on CodePlex into a format usable
+by Postgres, as well as a Postgres script to create the tables, load the data, convert
+the hierarchyid columns, add primary and foreign keys, and create some of the views used
+by Adventureworks.
 
-## How to use this file:
+## How to set up the database:
 
 Download [Adventure Works 2014 OLTP Script](https://msftdbprodsamples.codeplex.com/downloads/get/880662).
 (If this link becomes broken then here's the [original page](https://msftdbprodsamples.codeplex.com/releases/view/125550).)
@@ -21,8 +21,6 @@ Create the database and tables, import the data, and set up the views and keys w
 psql -c "CREATE DATABASE \"Adventureworks\";"
 psql -d Adventureworks < install.sql
 ```
-The Production.ProductReview table gets omitted, but the remaining 67 tables are properly set up.
-
-As well, 11 of the 20 views are established.  The ones not built are those that rely on XML functions like value and ref.
+All 68 tables are properly set up, and 11 of the 20 views are established.  The ones not built are those that rely on XML functions like value and ref.
 
 Enjoy!

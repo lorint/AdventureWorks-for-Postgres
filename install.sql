@@ -16,7 +16,7 @@
 --   psql -c "CREATE DATABASE \"Adventureworks\";"
 --   psql -d Adventureworks < install.sql
 
--- Production.ProductReview gets omitted, but the remaining 67 tables are properly set up.
+-- All 68 tables are properly set up.
 -- As well, 11 of the 20 views are established.  The ones not built are those that rely on
 -- XML functions like value and ref.
 
@@ -332,7 +332,7 @@ $func$ LANGUAGE plpgsql;
 SELECT f_ConvertOrgNodes();
 -- Drop the original binary hierarchyid column
 ALTER TABLE HumanResources.Employee DROP COLUMN Org;
-DROP FUNCTION f_ConvertOrgNodes;
+DROP FUNCTION f_ConvertOrgNodes();
 
 
 
@@ -514,17 +514,17 @@ CREATE SCHEMA Production
     "primary" "Flag" NOT NULL CONSTRAINT "DF_ProductProductPhoto_Primary" DEFAULT (false),
     ModifiedDate TIMESTAMP NOT NULL CONSTRAINT "DF_ProductProductPhoto_ModifiedDate" DEFAULT (NOW())
   )
-  -- CREATE TABLE ProductReview(
-  --   ProductReviewID SERIAL NOT NULL, -- int
-  --   ProductID INT NOT NULL,
-  --   ReviewerName "Name" NOT NULL,
-  --   ReviewDate TIMESTAMP NOT NULL CONSTRAINT "DF_ProductReview_ReviewDate" DEFAULT (NOW()),
-  --   EmailAddress varchar(50) NOT NULL,
-  --   Rating INT NOT NULL,
-  --   Comments varchar(3850),
-  --   ModifiedDate TIMESTAMP NOT NULL CONSTRAINT "DF_ProductReview_ModifiedDate" DEFAULT (NOW()),
-  --   CONSTRAINT "CK_ProductReview_Rating" CHECK (Rating BETWEEN 1 AND 5)
-  -- )
+  CREATE TABLE ProductReview(
+    ProductReviewID SERIAL NOT NULL, -- int
+    ProductID INT NOT NULL,
+    ReviewerName "Name" NOT NULL,
+    ReviewDate TIMESTAMP NOT NULL CONSTRAINT "DF_ProductReview_ReviewDate" DEFAULT (NOW()),
+    EmailAddress varchar(50) NOT NULL,
+    Rating INT NOT NULL,
+    Comments varchar(3850),
+    ModifiedDate TIMESTAMP NOT NULL CONSTRAINT "DF_ProductReview_ModifiedDate" DEFAULT (NOW()),
+    CONSTRAINT "CK_ProductReview_Rating" CHECK (Rating BETWEEN 1 AND 5)
+  )
   CREATE TABLE ScrapReason(
     ScrapReasonID SERIAL NOT NULL, -- smallint
     Name "Name" NOT NULL,
@@ -633,8 +633,51 @@ SELECT 'Production.ProductPhoto';
 \copy Production.ProductPhoto FROM 'ProductPhoto.csv' DELIMITER '	' CSV;
 SELECT 'Production.ProductProductPhoto';
 \copy Production.ProductProductPhoto FROM 'ProductProductPhoto.csv' DELIMITER '	' CSV;
+
+-- This doesn't work:
 -- SELECT 'Production.ProductReview';
--- \copy Production.ProductReview FROM 'ProductReview.csv' DELIMITER '	' CSV;
+-- \copy Production.ProductReview FROM 'ProductReview.csv' DELIMITER '  ' CSV;
+
+-- so instead ...
+INSERT INTO Production.ProductReview (ProductReviewID, ProductID, ReviewerName, ReviewDate, EmailAddress, Rating, Comments, ModifiedDate) VALUES
+ (1, 709, 'John Smith', '2013-09-18 00:00:00', 'john@fourthcoffee.com', 5, 'I can''t believe I''m singing the praises of a pair of socks, but I just came back from a grueling
+3-day ride and these socks really helped make the trip a blast. They''re lightweight yet really cushioned my feet all day. 
+The reinforced toe is nearly bullet-proof and I didn''t experience any problems with rubbing or blisters like I have with
+other brands. I know it sounds silly, but it''s always the little stuff (like comfortable feet) that makes or breaks a long trip.
+I won''t go on another trip without them!', '2013-09-18 00:00:00'),
+
+ (2, 937, 'David', '2013-11-13 00:00:00', 'david@graphicdesigninstitute.com', 4, 'A little on the heavy side, but overall the entry/exit is easy in all conditions. I''ve used these pedals for 
+more than 3 years and I''ve never had a problem. Cleanup is easy. Mud and sand don''t get trapped. I would like 
+them even better if there was a weight reduction. Maybe in the next design. Still, I would recommend them to a friend.', '2013-11-13 00:00:00'),
+
+ (3, 937, 'Jill', '2013-11-15 00:00:00', 'jill@margiestravel.com', 2, 'Maybe it''s just because I''m new to mountain biking, but I had a terrible time getting use
+to these pedals. In my first outing, I wiped out trying to release my foot. Any suggestions on
+ways I can adjust the pedals, or is it just a learning curve thing?', '2013-11-15 00:00:00'),
+
+ (4, 798, 'Laura Norman', '2013-11-15 00:00:00', 'laura@treyresearch.net', 5, 'The Road-550-W from Adventure Works Cycles is everything it''s advertised to be. Finally, a quality bike that
+is actually built for a woman and provides control and comfort in one neat package. The top tube is shorter, the suspension is weight-tuned and there''s a much shorter reach to the brake
+levers. All this adds up to a great mountain bike that is sure to accommodate any woman''s anatomy. In addition to getting the size right, the saddle is incredibly comfortable. 
+Attention to detail is apparent in every aspect from the frame finish to the careful design of each component. Each component is a solid performer without any fluff. 
+The designers clearly did their homework and thought about size, weight, and funtionality throughout. And at less than 19 pounds, the bike is manageable for even the most petite cyclist.
+
+We had 5 riders take the bike out for a spin and really put it to the test. The results were consistent and very positive. Our testers loved the manuverability 
+and control they had with the redesigned frame on the 550-W. A definite improvement over the 2002 design. Four out of five testers listed quick handling
+and responsivness were the key elements they noticed. Technical climbing and on the flats, the bike just cruises through the rough. Tight corners and obstacles were handled effortlessly. The fifth tester was more impressed with the smooth ride. The heavy-duty shocks absorbed even the worst bumps and provided a soft ride on all but the 
+nastiest trails and biggest drops. The shifting was rated superb and typical of what we''ve come to expect from Adventure Works Cycles. On descents, the bike handled flawlessly and tracked very well. The bike is well balanced front-to-rear and frame flex was minimal. In particular, the testers
+noted that the brake system had a unique combination of power and modulation.  While some brake setups can be overly touchy, these brakes had a good
+amount of power, but also a good feel that allows you to apply as little or as much braking power as is needed. Second is their short break-in period. We found that they tend to break-in well before
+the end of the first ride; while others take two to three rides (or more) to come to full power. 
+
+On the negative side, the pedals were not quite up to our tester''s standards. 
+Just for fun, we experimented with routine maintenance tasks. Overall we found most operations to be straight forward and easy to complete. The only exception was replacing the front wheel. The maintenance manual that comes
+with the bike say to install the front wheel with the axle quick release or bolt, then compress the fork a few times before fastening and tightening the two quick-release mechanisms on the bottom of the dropouts. This is to seat the axle in the dropouts, and if you do not
+do this, the axle will become seated after you tightened the two bottom quick releases, which will then become loose. It''s better to test the tightness carefully or you may notice that the two bottom quick releases have come loose enough to fall completely open. And that''s something you don''t want to experience
+while out on the road! 
+
+The Road-550-W frame is available in a variety of sizes and colors and has the same durable, high-quality aluminum that AWC is known for. At a MSRP of just under $1125.00, it''s comparable in price to its closest competitors and
+we think that after a test drive you''l find the quality and performance above and beyond . You''ll have a grin on your face and be itching to get out on the road for more. While designed for serious road racing, the Road-550-W would be an excellent choice for just about any terrain and 
+any level of experience. It''s a huge step in the right direction for female cyclists and well worth your consideration and hard-earned money.', '2013-11-15 00:00:00');
+
 SELECT 'Production.ScrapReason';
 \copy Production.ScrapReason FROM 'ScrapReason.csv' DELIMITER '	' CSV;
 SELECT 'Production.TransactionHistory';
@@ -730,7 +773,7 @@ $func$ LANGUAGE plpgsql;
 SELECT f_ConvertDocNodes();
 -- Drop the original binary hierarchyid column
 ALTER TABLE Production.Document DROP COLUMN Doc;
-DROP FUNCTION f_ConvertDocNodes;
+DROP FUNCTION f_ConvertDocNodes();
 
 -- ProductDocument HierarchyID column
   ALTER TABLE Production.ProductDocument ADD DocumentNode VARCHAR DEFAULT '/';
@@ -811,7 +854,7 @@ $func$ LANGUAGE plpgsql;
 SELECT f_ConvertDocNodes();
 -- Drop the original binary hierarchyid column
 ALTER TABLE Production.ProductDocument DROP COLUMN Doc;
-DROP FUNCTION f_ConvertDocNodes;
+DROP FUNCTION f_ConvertDocNodes();
 ALTER TABLE Production.ProductDocument DROP COLUMN rowguid;
 
 
@@ -1458,14 +1501,14 @@ COMMENT ON TABLE Production.ProductProductPhoto IS 'Cross-reference table mappin
   COMMENT ON COLUMN Production.ProductProductPhoto.ProductPhotoID IS 'Product photo identification number. Foreign key to ProductPhoto.ProductPhotoID.';
   COMMENT ON COLUMN Production.ProductProductPhoto.Primary IS '0 = Photo is not the principal image. 1 = Photo is the principal image.';
 
--- COMMENT ON TABLE Production.ProductReview IS 'Customer reviews of products they have purchased.';
---   COMMENT ON COLUMN Production.ProductReview.ProductReviewID IS 'Primary key for ProductReview records.';
---   COMMENT ON COLUMN Production.ProductReview.ProductID IS 'Product identification number. Foreign key to Product.ProductID.';
---   COMMENT ON COLUMN Production.ProductReview.ReviewerName IS 'Name of the reviewer.';
---   COMMENT ON COLUMN Production.ProductReview.ReviewDate IS 'Date review was submitted.';
---   COMMENT ON COLUMN Production.ProductReview.EmailAddress IS 'Reviewer''s e-mail address.';
---   COMMENT ON COLUMN Production.ProductReview.Rating IS 'Product rating given by the reviewer. Scale is 1 to 5 with 5 as the highest rating.';
---   COMMENT ON COLUMN Production.ProductReview.Comments IS 'Reviewer''s comments';
+COMMENT ON TABLE Production.ProductReview IS 'Customer reviews of products they have purchased.';
+  COMMENT ON COLUMN Production.ProductReview.ProductReviewID IS 'Primary key for ProductReview records.';
+  COMMENT ON COLUMN Production.ProductReview.ProductID IS 'Product identification number. Foreign key to Product.ProductID.';
+  COMMENT ON COLUMN Production.ProductReview.ReviewerName IS 'Name of the reviewer.';
+  COMMENT ON COLUMN Production.ProductReview.ReviewDate IS 'Date review was submitted.';
+  COMMENT ON COLUMN Production.ProductReview.EmailAddress IS 'Reviewer''s e-mail address.';
+  COMMENT ON COLUMN Production.ProductReview.Rating IS 'Product rating given by the reviewer. Scale is 1 to 5 with 5 as the highest rating.';
+  COMMENT ON COLUMN Production.ProductReview.Comments IS 'Reviewer''s comments';
 
 COMMENT ON TABLE Production.ProductSubcategory IS 'Product subcategories. See ProductCategory table.';
   COMMENT ON COLUMN Production.ProductSubcategory.ProductSubcategoryID IS 'Primary key for ProductSubcategory records.';
@@ -1911,10 +1954,10 @@ ALTER TABLE Production.ProductProductPhoto ADD
     CONSTRAINT "PK_ProductProductPhoto_ProductID_ProductPhotoID" PRIMARY KEY
     (ProductID, ProductPhotoID);
 
--- ALTER TABLE Production.ProductReview ADD
---     CONSTRAINT "PK_ProductReview_ProductReviewID" PRIMARY KEY
---     (ProductReviewID);
--- CLUSTER Production.ProductReview USING "PK_ProductReview_ProductReviewID";
+ALTER TABLE Production.ProductReview ADD
+    CONSTRAINT "PK_ProductReview_ProductReviewID" PRIMARY KEY
+    (ProductReviewID);
+CLUSTER Production.ProductReview USING "PK_ProductReview_ProductReviewID";
 
 ALTER TABLE Production.ProductSubcategory ADD
     CONSTRAINT "PK_ProductSubcategory_ProductSubcategoryID" PRIMARY KEY
@@ -2237,9 +2280,9 @@ ALTER TABLE Production.ProductProductPhoto ADD
     CONSTRAINT "FK_ProductProductPhoto_ProductPhoto_ProductPhotoID" FOREIGN KEY
     (ProductPhotoID) REFERENCES Production.ProductPhoto(ProductPhotoID);
 
--- ALTER TABLE Production.ProductReview ADD
---     CONSTRAINT "FK_ProductReview_Product_ProductID" FOREIGN KEY
---     (ProductID) REFERENCES Production.Product(ProductID);
+ALTER TABLE Production.ProductReview ADD
+    CONSTRAINT "FK_ProductReview_Product_ProductID" FOREIGN KEY
+    (ProductID) REFERENCES Production.Product(ProductID);
 
 ALTER TABLE Production.ProductSubcategory ADD
     CONSTRAINT "FK_ProductSubcategory_ProductCategory_ProductCategoryID" FOREIGN KEY

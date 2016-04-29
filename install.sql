@@ -184,7 +184,7 @@ CREATE SCHEMA HumanResources
     BusinessEntityID INT NOT NULL,
     NationalIDNumber varchar(15) NOT NULL,
     LoginID varchar(256) NOT NULL,    
-    OrganizationNode varchar NULL,-- hierarchyid
+    Org varchar NULL,-- hierarchyid, will become OrganizationNode
     OrganizationLevel INT NULL, -- AS OrganizationNode.GetLevel(),
     JobTitle varchar(50) NOT NULL,
     BirthDate DATE NOT NULL,
@@ -254,6 +254,87 @@ SELECT 'HumanResources.Shift';
 -- Calculated column that needed to be there just for the CSV import
 ALTER TABLE HumanResources.Employee DROP COLUMN OrganizationLevel;
 
+-- Employee HierarchyID column
+ALTER TABLE HumanResources.Employee ADD organizationnode VARCHAR DEFAULT '/';
+-- Convert from all the hex to a stream of hierarchyid bits
+WITH RECURSIVE hier AS (
+  SELECT businessentityid, org, get_byte(decode(substring(org, 1, 2), 'hex'), 0)::bit(8)::varchar AS bits, 2 AS i
+    FROM HumanResources.Employee
+  UNION ALL
+  SELECT e.businessentityid, e.org, hier.bits || get_byte(decode(substring(e.org, i + 1, 2), 'hex'), 0)::bit(8)::varchar, i + 2 AS i
+    FROM HumanResources.Employee AS e INNER JOIN
+      hier ON e.businessentityid = hier.businessentityid AND i < LENGTH(e.org)
+)
+UPDATE HumanResources.Employee AS emp
+  SET org = COALESCE(trim(trailing '0' FROM hier.bits::TEXT), '')
+  FROM hier
+  WHERE emp.businessentityid = hier.businessentityid
+    AND (hier.org IS NULL OR i = LENGTH(hier.org));
+
+-- Convert bits to the real hieararchy paths
+CREATE OR REPLACE FUNCTION f_ConvertOrgNodes()
+  RETURNS void AS
+$func$
+DECLARE
+  got_none BOOLEAN;
+BEGIN
+  LOOP
+  got_none := true;
+  -- 01 = 0-3
+  UPDATE HumanResources.Employee
+   SET organizationnode = organizationnode || SUBSTRING(org, 3,2)::bit(2)::INTEGER::VARCHAR || CASE SUBSTRING(org, 5, 1) WHEN '0' THEN '.' ELSE '/' END,
+     org = SUBSTRING(org, 6, 9999)
+    WHERE org LIKE '01%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+
+  -- 100 = 4-7
+  UPDATE HumanResources.Employee
+   SET organizationnode = organizationnode || (SUBSTRING(org, 4,2)::bit(2)::INTEGER + 4)::VARCHAR || CASE SUBSTRING(org, 6, 1) WHEN '0' THEN '.' ELSE '/' END,
+     org = SUBSTRING(org, 7, 9999)
+    WHERE org LIKE '100%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+  
+  -- 101 = 8-15
+  UPDATE HumanResources.Employee
+   SET organizationnode = organizationnode || (SUBSTRING(org, 4,3)::bit(3)::INTEGER + 8)::VARCHAR || CASE SUBSTRING(org, 7, 1) WHEN '0' THEN '.' ELSE '/' END,
+     org = SUBSTRING(org, 8, 9999)
+    WHERE org LIKE '101%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+
+  -- 110 = 16-79
+  UPDATE HumanResources.Employee
+   SET organizationnode = organizationnode || ((SUBSTRING(org, 4,2)||SUBSTRING(org, 7,1)||SUBSTRING(org, 9,3))::bit(6)::INTEGER + 16)::VARCHAR || CASE SUBSTRING(org, 12, 1) WHEN '0' THEN '.' ELSE '/' END,
+     org = SUBSTRING(org, 13, 9999)
+    WHERE org LIKE '110%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+
+  -- 1110 = 80-1103
+  UPDATE HumanResources.Employee
+   SET organizationnode = organizationnode || ((SUBSTRING(org, 5,3)||SUBSTRING(org, 9,3)||SUBSTRING(org, 13,1)||SUBSTRING(org, 15,3))::bit(10)::INTEGER + 80)::VARCHAR || CASE SUBSTRING(org, 18, 1) WHEN '0' THEN '.' ELSE '/' END,
+     org = SUBSTRING(org, 19, 9999)
+    WHERE org LIKE '1110%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+  EXIT WHEN got_none;
+  END LOOP;
+END
+$func$ LANGUAGE plpgsql;
+
+SELECT f_ConvertOrgNodes();
+-- Drop the original binary hierarchyid column
+ALTER TABLE HumanResources.Employee DROP COLUMN Org;
+DROP FUNCTION f_ConvertOrgNodes;
+
+
 
 
 CREATE SCHEMA Production
@@ -280,13 +361,13 @@ CREATE SCHEMA Production
     ModifiedDate TIMESTAMP NOT NULL CONSTRAINT "DF_Culture_ModifiedDate" DEFAULT (NOW())
   )
   CREATE TABLE Document(
-    DocumentNode varchar NOT NULL,-- hierarchyid
+    Doc varchar NULL,-- hierarchyid, will become DocumentNode
     DocumentLevel INTEGER, -- AS DocumentNode.GetLevel(),
     Title varchar(50) NOT NULL,
     Owner INT NOT NULL,
     FolderFlag "Flag" NOT NULL CONSTRAINT "DF_Document_FolderFlag" DEFAULT (false),
     FileName varchar(400) NOT NULL,
-    FileExtension varchar(8) NOT NULL,
+    FileExtension varchar(8) NULL,
     Revision char(5) NOT NULL,
     ChangeNumber INT NOT NULL CONSTRAINT "DF_Document_ChangeNumber" DEFAULT (0),
     Status smallint NOT NULL, -- tinyint
@@ -371,7 +452,7 @@ CREATE SCHEMA Production
   )
   CREATE TABLE ProductDocument(
     ProductID INT NOT NULL,
-    DocumentNode varchar NOT NULL, -- hierarchyid
+    Doc varchar NOT NULL, -- hierarchyid, will become DocumentNode
     ModifiedDate TIMESTAMP NOT NULL CONSTRAINT "DF_ProductDocument_ModifiedDate" DEFAULT (NOW())
   )
   CREATE TABLE Location(
@@ -570,6 +651,170 @@ SELECT 'Production.WorkOrderRouting';
 -- Calculated columns that needed to be there just for the CSV import
 ALTER TABLE Production.WorkOrder DROP COLUMN StockedQty;
 ALTER TABLE Production.Document DROP COLUMN DocumentLevel;
+
+-- Document HierarchyID column
+ALTER TABLE Production.Document ADD DocumentNode VARCHAR DEFAULT '/';
+-- Convert from all the hex to a stream of hierarchyid bits
+WITH RECURSIVE hier AS (
+  SELECT rowguid, doc, get_byte(decode(substring(doc, 1, 2), 'hex'), 0)::bit(8)::varchar AS bits, 2 AS i
+    FROM Production.Document
+  UNION ALL
+  SELECT e.rowguid, e.doc, hier.bits || get_byte(decode(substring(e.doc, i + 1, 2), 'hex'), 0)::bit(8)::varchar, i + 2 AS i
+    FROM Production.Document AS e INNER JOIN
+      hier ON e.rowguid = hier.rowguid AND i < LENGTH(e.doc)
+)
+UPDATE Production.Document AS emp
+  SET doc = COALESCE(trim(trailing '0' FROM hier.bits::TEXT), '')
+  FROM hier
+  WHERE emp.rowguid = hier.rowguid
+    AND (hier.doc IS NULL OR i = LENGTH(hier.doc));
+
+-- Convert bits to the real hieararchy paths
+CREATE OR REPLACE FUNCTION f_ConvertDocNodes()
+  RETURNS void AS
+$func$
+DECLARE
+  got_none BOOLEAN;
+BEGIN
+  LOOP
+  got_none := true;
+  -- 01 = 0-3
+  UPDATE Production.Document
+   SET DocumentNode = DocumentNode || SUBSTRING(doc, 3,2)::bit(2)::INTEGER::VARCHAR || CASE SUBSTRING(doc, 5, 1) WHEN '0' THEN '.' ELSE '/' END,
+     doc = SUBSTRING(doc, 6, 9999)
+    WHERE doc LIKE '01%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+
+  -- 100 = 4-7
+  UPDATE Production.Document
+   SET DocumentNode = DocumentNode || (SUBSTRING(doc, 4,2)::bit(2)::INTEGER + 4)::VARCHAR || CASE SUBSTRING(doc, 6, 1) WHEN '0' THEN '.' ELSE '/' END,
+     doc = SUBSTRING(doc, 7, 9999)
+    WHERE doc LIKE '100%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+  
+  -- 101 = 8-15
+  UPDATE Production.Document
+   SET DocumentNode = DocumentNode || (SUBSTRING(doc, 4,3)::bit(3)::INTEGER + 8)::VARCHAR || CASE SUBSTRING(doc, 7, 1) WHEN '0' THEN '.' ELSE '/' END,
+     doc = SUBSTRING(doc, 8, 9999)
+    WHERE doc LIKE '101%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+
+  -- 110 = 16-79
+  UPDATE Production.Document
+   SET DocumentNode = DocumentNode || ((SUBSTRING(doc, 4,2)||SUBSTRING(doc, 7,1)||SUBSTRING(doc, 9,3))::bit(6)::INTEGER + 16)::VARCHAR || CASE SUBSTRING(doc, 12, 1) WHEN '0' THEN '.' ELSE '/' END,
+     doc = SUBSTRING(doc, 13, 9999)
+    WHERE doc LIKE '110%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+
+  -- 1110 = 80-1103
+  UPDATE Production.Document
+   SET DocumentNode = DocumentNode || ((SUBSTRING(doc, 5,3)||SUBSTRING(doc, 9,3)||SUBSTRING(doc, 13,1)||SUBSTRING(doc, 15,3))::bit(10)::INTEGER + 80)::VARCHAR || CASE SUBSTRING(doc, 18, 1) WHEN '0' THEN '.' ELSE '/' END,
+     doc = SUBSTRING(doc, 19, 9999)
+    WHERE doc LIKE '1110%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+  EXIT WHEN got_none;
+  END LOOP;
+END
+$func$ LANGUAGE plpgsql;
+
+SELECT f_ConvertDocNodes();
+-- Drop the original binary hierarchyid column
+ALTER TABLE Production.Document DROP COLUMN Doc;
+DROP FUNCTION f_ConvertDocNodes;
+
+-- ProductDocument HierarchyID column
+  ALTER TABLE Production.ProductDocument ADD DocumentNode VARCHAR DEFAULT '/';
+ALTER TABLE Production.ProductDocument ADD rowguid uuid NOT NULL CONSTRAINT "DF_ProductDocument_rowguid" DEFAULT (uuid_generate_v1());
+-- Convert from all the hex to a stream of hierarchyid bits
+WITH RECURSIVE hier AS (
+  SELECT rowguid, doc, get_byte(decode(substring(doc, 1, 2), 'hex'), 0)::bit(8)::varchar AS bits, 2 AS i
+    FROM Production.ProductDocument
+  UNION ALL
+  SELECT e.rowguid, e.doc, hier.bits || get_byte(decode(substring(e.doc, i + 1, 2), 'hex'), 0)::bit(8)::varchar, i + 2 AS i
+    FROM Production.ProductDocument AS e INNER JOIN
+      hier ON e.rowguid = hier.rowguid AND i < LENGTH(e.doc)
+)
+UPDATE Production.ProductDocument AS emp
+  SET doc = COALESCE(trim(trailing '0' FROM hier.bits::TEXT), '')
+  FROM hier
+  WHERE emp.rowguid = hier.rowguid
+    AND (hier.doc IS NULL OR i = LENGTH(hier.doc));
+
+-- Convert bits to the real hieararchy paths
+CREATE OR REPLACE FUNCTION f_ConvertDocNodes()
+  RETURNS void AS
+$func$
+DECLARE
+  got_none BOOLEAN;
+BEGIN
+  LOOP
+  got_none := true;
+  -- 01 = 0-3
+  UPDATE Production.ProductDocument
+   SET DocumentNode = DocumentNode || SUBSTRING(doc, 3,2)::bit(2)::INTEGER::VARCHAR || CASE SUBSTRING(doc, 5, 1) WHEN '0' THEN '.' ELSE '/' END,
+     doc = SUBSTRING(doc, 6, 9999)
+    WHERE doc LIKE '01%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+
+  -- 100 = 4-7
+  UPDATE Production.ProductDocument
+   SET DocumentNode = DocumentNode || (SUBSTRING(doc, 4,2)::bit(2)::INTEGER + 4)::VARCHAR || CASE SUBSTRING(doc, 6, 1) WHEN '0' THEN '.' ELSE '/' END,
+     doc = SUBSTRING(doc, 7, 9999)
+    WHERE doc LIKE '100%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+  
+  -- 101 = 8-15
+  UPDATE Production.ProductDocument
+   SET DocumentNode = DocumentNode || (SUBSTRING(doc, 4,3)::bit(3)::INTEGER + 8)::VARCHAR || CASE SUBSTRING(doc, 7, 1) WHEN '0' THEN '.' ELSE '/' END,
+     doc = SUBSTRING(doc, 8, 9999)
+    WHERE doc LIKE '101%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+
+  -- 110 = 16-79
+  UPDATE Production.ProductDocument
+   SET DocumentNode = DocumentNode || ((SUBSTRING(doc, 4,2)||SUBSTRING(doc, 7,1)||SUBSTRING(doc, 9,3))::bit(6)::INTEGER + 16)::VARCHAR || CASE SUBSTRING(doc, 12, 1) WHEN '0' THEN '.' ELSE '/' END,
+     doc = SUBSTRING(doc, 13, 9999)
+    WHERE doc LIKE '110%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+
+  -- 1110 = 80-1103
+  UPDATE Production.ProductDocument
+   SET DocumentNode = DocumentNode || ((SUBSTRING(doc, 5,3)||SUBSTRING(doc, 9,3)||SUBSTRING(doc, 13,1)||SUBSTRING(doc, 15,3))::bit(10)::INTEGER + 80)::VARCHAR || CASE SUBSTRING(doc, 18, 1) WHEN '0' THEN '.' ELSE '/' END,
+     doc = SUBSTRING(doc, 19, 9999)
+    WHERE doc LIKE '1110%';
+  IF FOUND THEN
+    got_none := false;
+  END IF;
+  EXIT WHEN got_none;
+  END LOOP;
+END
+$func$ LANGUAGE plpgsql;
+
+SELECT f_ConvertDocNodes();
+-- Drop the original binary hierarchyid column
+ALTER TABLE Production.ProductDocument DROP COLUMN Doc;
+DROP FUNCTION f_ConvertDocNodes;
+ALTER TABLE Production.ProductDocument DROP COLUMN rowguid;
+
+
 
 
 
@@ -2791,5 +3036,3 @@ FROM Purchasing.Vendor v
 -- All the tables in Adventureworks:
 -- (Did you know that \dt can filter schema and table names using RegEx?)
 \dt (humanresources|person|production|purchasing|sales).*
-
--- 3/16 - bottom "revised"

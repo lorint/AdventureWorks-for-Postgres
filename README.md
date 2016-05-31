@@ -28,7 +28,11 @@ Create the database and tables, import the data, and set up the views and keys w
 psql -c "CREATE DATABASE \"Adventureworks\";"
 psql -d Adventureworks < install.sql
 ```
-All 68 tables are properly set up, and 11 of the 20 views are established.  The ones not built are those that rely on XML functions like value and ref.
+All 68 tables are properly set up, and 11 of the 20 views are established.  The ones not built are those that rely on XML functions like value and ref.  To see a list of tables, open psql, and then connect to the database and show all the tables with these two commands:
+```
+\c "Adventureworks"
+\dt (humanresources|person|production|purchasing|sales).*
+```
 
 ## Motivation
 

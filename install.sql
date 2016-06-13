@@ -3068,7 +3068,85 @@ FROM Purchasing.Vendor v
     ON at.AddressTypeID = bea.AddressTypeID;
 
 
-
+-- Convenience views
+CREATE SCHEMA hr
+  CREATE VIEW d AS SELECT * FROM humanresources.department
+  CREATE VIEW e AS SELECT * FROM humanresources.employee
+  CREATE VIEW edh AS SELECT * FROM humanresources.employeedepartmenthistory
+  CREATE VIEW eph AS SELECT * FROM humanresources.employeepayhistory
+  CREATE VIEW jc AS SELECT * FROM humanresources.jobcandidate
+  CREATE VIEW s AS SELECT * FROM humanresources.shift
+;
+CREATE SCHEMA pe
+  CREATE VIEW a AS SELECT * FROM person.address
+  CREATE VIEW at AS SELECT * FROM person.addresstype
+  CREATE VIEW be AS SELECT * FROM person.businessentity
+  CREATE VIEW bea AS SELECT * FROM person.businessentityaddress
+  CREATE VIEW bec AS SELECT * FROM person.businessentitycontact
+  CREATE VIEW ct AS SELECT * FROM person.contacttype
+  CREATE VIEW cr AS SELECT * FROM person.countryregion
+  CREATE VIEW e AS SELECT * FROM person.emailaddress
+  CREATE VIEW pa AS SELECT * FROM person.password
+  CREATE VIEW p AS SELECT * FROM person.person
+  CREATE VIEW pp AS SELECT * FROM person.personphone
+  CREATE VIEW pnt AS SELECT * FROM person.phonenumbertype
+  CREATE VIEW sp AS SELECT * FROM person.stateprovince
+;
+CREATE SCHEMA pr
+  CREATE VIEW bom AS SELECT * FROM production.billofmaterials
+  CREATE VIEW c AS SELECT * FROM production.culture
+  CREATE VIEW d AS SELECT * FROM production.document
+  CREATE VIEW i AS SELECT * FROM production.illustration
+  CREATE VIEW l AS SELECT * FROM production.location
+  CREATE VIEW p AS SELECT * FROM production.product
+  CREATE VIEW pc AS SELECT * FROM production.productcategory
+  CREATE VIEW pch AS SELECT * FROM production.productcosthistory
+  CREATE VIEW pd AS SELECT * FROM production.productdescription
+  CREATE VIEW pdoc AS SELECT * FROM production.productdocument
+  CREATE VIEW pi AS SELECT * FROM production.productinventory
+  CREATE VIEW plph AS SELECT * FROM production.productlistpricehistory
+  CREATE VIEW pm AS SELECT * FROM production.productmodel
+  CREATE VIEW pmi AS SELECT * FROM production.productmodelillustration
+  CREATE VIEW pmpdc AS SELECT * FROM production.productmodelproductdescriptionculture
+  CREATE VIEW pp AS SELECT * FROM production.productphoto
+  CREATE VIEW ppp AS SELECT * FROM production.productproductphoto
+  CREATE VIEW pr AS SELECT * FROM production.productreview
+  CREATE VIEW psc AS SELECT * FROM production.productsubcategory
+  CREATE VIEW sr AS SELECT * FROM production.scrapreason
+  CREATE VIEW th AS SELECT * FROM production.transactionhistory
+  CREATE VIEW tha AS SELECT * FROM production.transactionhistoryarchive
+  CREATE VIEW um AS SELECT * FROM production.unitmeasure
+  CREATE VIEW w AS SELECT * FROM production.workorder
+  CREATE VIEW wr AS SELECT * FROM production.workorderrouting
+;
+CREATE SCHEMA pu
+  CREATE VIEW pv AS SELECT * FROM purchasing.productvendor
+  CREATE VIEW pod AS SELECT * FROM purchasing.purchaseorderdetail
+  CREATE VIEW poh AS SELECT * FROM purchasing.purchaseorderheader
+  CREATE VIEW sm AS SELECT * FROM purchasing.shipmethod
+  CREATE VIEW v AS SELECT * FROM purchasing.vendor
+;
+CREATE SCHEMA sa
+  CREATE VIEW crc AS SELECT * FROM sales.countryregioncurrency
+  CREATE VIEW cc AS SELECT * FROM sales.creditcard
+  CREATE VIEW cu AS SELECT * FROM sales.currency
+  CREATE VIEW cr AS SELECT * FROM sales.currencyrate
+  CREATE VIEW c AS SELECT * FROM sales.customer
+  CREATE VIEW pcc AS SELECT * FROM sales.personcreditcard
+  CREATE VIEW sod AS SELECT * FROM sales.salesorderdetail
+  CREATE VIEW soh AS SELECT * FROM sales.salesorderheader
+  CREATE VIEW sohsr AS SELECT * FROM sales.salesorderheadersalesreason
+  CREATE VIEW sp AS SELECT * FROM sales.salesperson
+  CREATE VIEW spqh AS SELECT * FROM sales.salespersonquotahistory
+  CREATE VIEW sr AS SELECT * FROM sales.salesreason
+  CREATE VIEW tr AS SELECT * FROM sales.salestaxrate
+  CREATE VIEW st AS SELECT * FROM sales.salesterritory
+  CREATE VIEW sth AS SELECT * FROM sales.salesterritoryhistory
+  CREATE VIEW sci AS SELECT * FROM sales.shoppingcartitem
+  CREATE VIEW so AS SELECT * FROM sales.specialoffer
+  CREATE VIEW sop AS SELECT * FROM sales.specialofferproduct
+  CREATE VIEW s AS SELECT * FROM sales.store
+;
 
 
 

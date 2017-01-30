@@ -146,31 +146,31 @@ CREATE SCHEMA Person
 COMMENT ON SCHEMA Person IS 'Contains objects related to names and addresses of customers, vendors, and employees';
 
 SELECT 'Person.BusinessEntity';
-\copy Person.BusinessEntity FROM './BusinessEntity.csv' DELIMITER '	' CSV;
+\copy Person.BusinessEntity FROM './BusinessEntity.csv' DELIMITER E'\t' CSV;
 SELECT 'Person.Person';
-\copy Person.Person FROM './Person.csv' DELIMITER '	' CSV;
+\copy Person.Person FROM './Person.csv' DELIMITER E'\t' CSV;
 SELECT 'Person.StateProvince';
-\copy Person.StateProvince FROM './StateProvince.csv' DELIMITER '	' CSV;
+\copy Person.StateProvince FROM './StateProvince.csv' DELIMITER E'\t' CSV;
 SELECT 'Person.Address';
-\copy Person.Address FROM './Address.csv' DELIMITER '	' CSV ENCODING 'latin1';
+\copy Person.Address FROM './Address.csv' DELIMITER E'\t' CSV ENCODING 'latin1';
 SELECT 'Person.AddressType';
-\copy Person.AddressType FROM './AddressType.csv' DELIMITER '	' CSV;
+\copy Person.AddressType FROM './AddressType.csv' DELIMITER E'\t' CSV;
 SELECT 'Person.BusinessEntityAddress';
-\copy Person.BusinessEntityAddress FROM './BusinessEntityAddress.csv' DELIMITER '	' CSV;
+\copy Person.BusinessEntityAddress FROM './BusinessEntityAddress.csv' DELIMITER E'\t' CSV;
 SELECT 'Person.ContactType';
-\copy Person.ContactType FROM './ContactType.csv' DELIMITER '	' CSV;
+\copy Person.ContactType FROM './ContactType.csv' DELIMITER E'\t' CSV;
 SELECT 'Person.BusinessEntityContact';
-\copy Person.BusinessEntityContact FROM './BusinessEntityContact.csv' DELIMITER '	' CSV;
+\copy Person.BusinessEntityContact FROM './BusinessEntityContact.csv' DELIMITER E'\t' CSV;
 SELECT 'Person.EmailAddress';
-\copy Person.EmailAddress FROM './EmailAddress.csv' DELIMITER '	' CSV;
+\copy Person.EmailAddress FROM './EmailAddress.csv' DELIMITER E'\t' CSV;
 SELECT 'Person.Password';
-\copy Person.Password FROM './Password.csv' DELIMITER '	' CSV;
+\copy Person.Password FROM './Password.csv' DELIMITER E'\t' CSV;
 SELECT 'Person.PhoneNumberType';
-\copy Person.PhoneNumberType FROM './PhoneNumberType.csv' DELIMITER '	' CSV;
+\copy Person.PhoneNumberType FROM './PhoneNumberType.csv' DELIMITER E'\t' CSV;
 SELECT 'Person.PersonPhone';
-\copy Person.PersonPhone FROM './PersonPhone.csv' DELIMITER '	' CSV;
+\copy Person.PersonPhone FROM './PersonPhone.csv' DELIMITER E'\t' CSV;
 SELECT 'Person.CountryRegion';
-\copy Person.CountryRegion FROM './CountryRegion.csv' DELIMITER '	' CSV;
+\copy Person.CountryRegion FROM './CountryRegion.csv' DELIMITER E'\t' CSV;
 
 
 CREATE SCHEMA HumanResources
@@ -239,17 +239,17 @@ CREATE SCHEMA HumanResources
 COMMENT ON SCHEMA HumanResources IS 'Contains objects related to employees and departments.';
 
 SELECT 'HumanResources.Department';
-\copy HumanResources.Department FROM './Department.csv' DELIMITER '	' CSV;
+\copy HumanResources.Department FROM './Department.csv' DELIMITER E'\t' CSV;
 SELECT 'HumanResources.Employee';
-\copy HumanResources.Employee FROM './Employee.csv' DELIMITER '	' CSV;
+\copy HumanResources.Employee FROM './Employee.csv' DELIMITER E'\t' CSV;
 SELECT 'HumanResources.EmployeeDepartmentHistory';
-\copy HumanResources.EmployeeDepartmentHistory FROM './EmployeeDepartmentHistory.csv' DELIMITER '	' CSV;
+\copy HumanResources.EmployeeDepartmentHistory FROM './EmployeeDepartmentHistory.csv' DELIMITER E'\t' CSV;
 SELECT 'HumanResources.EmployeePayHistory';
-\copy HumanResources.EmployeePayHistory FROM './EmployeePayHistory.csv' DELIMITER '	' CSV;
+\copy HumanResources.EmployeePayHistory FROM './EmployeePayHistory.csv' DELIMITER E'\t' CSV;
 SELECT 'HumanResources.JobCandidate';
-\copy HumanResources.JobCandidate FROM './JobCandidate.csv' DELIMITER '	' CSV ENCODING 'latin1';
+\copy HumanResources.JobCandidate FROM './JobCandidate.csv' DELIMITER E'\t' CSV ENCODING 'latin1';
 SELECT 'HumanResources.Shift';
-\copy HumanResources.Shift FROM './Shift.csv' DELIMITER '	' CSV;
+\copy HumanResources.Shift FROM './Shift.csv' DELIMITER E'\t' CSV;
 
 -- Calculated column that needed to be there just for the CSV import
 ALTER TABLE HumanResources.Employee DROP COLUMN OrganizationLevel;
@@ -598,41 +598,41 @@ CREATE SCHEMA Production
 COMMENT ON SCHEMA Production IS 'Contains objects related to products, inventory, and manufacturing.';
 
 SELECT 'Production.BillOfMaterials';
-\copy Production.BillOfMaterials FROM 'BillOfMaterials.csv' DELIMITER '	' CSV;
+\copy Production.BillOfMaterials FROM 'BillOfMaterials.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.Culture';
-\copy Production.Culture FROM 'Culture.csv' DELIMITER '	' CSV;
+\copy Production.Culture FROM 'Culture.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.Document';
-\copy Production.Document FROM 'Document.csv' DELIMITER '	' CSV;
+\copy Production.Document FROM 'Document.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.ProductCategory';
-\copy Production.ProductCategory FROM 'ProductCategory.csv' DELIMITER '	' CSV;
+\copy Production.ProductCategory FROM 'ProductCategory.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.ProductSubcategory';
-\copy Production.ProductSubcategory FROM 'ProductSubcategory.csv' DELIMITER '	' CSV;
+\copy Production.ProductSubcategory FROM 'ProductSubcategory.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.ProductModel';
-\copy Production.ProductModel FROM 'ProductModel.csv' DELIMITER '	' CSV;
+\copy Production.ProductModel FROM 'ProductModel.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.Product';
-\copy Production.Product FROM 'Product.csv' DELIMITER '	' CSV;
+\copy Production.Product FROM 'Product.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.ProductCostHistory';
-\copy Production.ProductCostHistory FROM 'ProductCostHistory.csv' DELIMITER '	' CSV;
+\copy Production.ProductCostHistory FROM 'ProductCostHistory.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.ProductDescription';
-\copy Production.ProductDescription FROM 'ProductDescription.csv' DELIMITER '	' CSV;
+\copy Production.ProductDescription FROM 'ProductDescription.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.ProductDocument';
-\copy Production.ProductDocument FROM 'ProductDocument.csv' DELIMITER '	' CSV;
+\copy Production.ProductDocument FROM 'ProductDocument.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.Location';
-\copy Production.Location FROM 'Location.csv' DELIMITER '	' CSV;
+\copy Production.Location FROM 'Location.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.ProductInventory';
-\copy Production.ProductInventory FROM 'ProductInventory.csv' DELIMITER '	' CSV;
+\copy Production.ProductInventory FROM 'ProductInventory.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.ProductListPriceHistory';
-\copy Production.ProductListPriceHistory FROM 'ProductListPriceHistory.csv' DELIMITER '	' CSV;
+\copy Production.ProductListPriceHistory FROM 'ProductListPriceHistory.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.Illustration';
-\copy Production.Illustration FROM 'Illustration.csv' DELIMITER '	' CSV;
+\copy Production.Illustration FROM 'Illustration.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.ProductModelIllustration';
-\copy Production.ProductModelIllustration FROM 'ProductModelIllustration.csv' DELIMITER '	' CSV;
+\copy Production.ProductModelIllustration FROM 'ProductModelIllustration.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.ProductModelProductDescriptionCulture';
-\copy Production.ProductModelProductDescriptionCulture FROM 'ProductModelProductDescriptionCulture.csv' DELIMITER '	' CSV;
+\copy Production.ProductModelProductDescriptionCulture FROM 'ProductModelProductDescriptionCulture.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.ProductPhoto';
-\copy Production.ProductPhoto FROM 'ProductPhoto.csv' DELIMITER '	' CSV;
+\copy Production.ProductPhoto FROM 'ProductPhoto.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.ProductProductPhoto';
-\copy Production.ProductProductPhoto FROM 'ProductProductPhoto.csv' DELIMITER '	' CSV;
+\copy Production.ProductProductPhoto FROM 'ProductProductPhoto.csv' DELIMITER E'\t' CSV;
 
 -- This doesn't work:
 -- SELECT 'Production.ProductReview';
@@ -679,17 +679,17 @@ we think that after a test drive you''l find the quality and performance above a
 any level of experience. It''s a huge step in the right direction for female cyclists and well worth your consideration and hard-earned money.', '2013-11-15 00:00:00');
 
 SELECT 'Production.ScrapReason';
-\copy Production.ScrapReason FROM 'ScrapReason.csv' DELIMITER '	' CSV;
+\copy Production.ScrapReason FROM 'ScrapReason.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.TransactionHistory';
-\copy Production.TransactionHistory FROM 'TransactionHistory.csv' DELIMITER '	' CSV;
+\copy Production.TransactionHistory FROM 'TransactionHistory.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.TransactionHistoryArchive';
-\copy Production.TransactionHistoryArchive FROM 'TransactionHistoryArchive.csv' DELIMITER '	' CSV;
+\copy Production.TransactionHistoryArchive FROM 'TransactionHistoryArchive.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.UnitMeasure';
-\copy Production.UnitMeasure FROM 'UnitMeasure.csv' DELIMITER '	' CSV;
+\copy Production.UnitMeasure FROM 'UnitMeasure.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.WorkOrder';
-\copy Production.WorkOrder FROM 'WorkOrder.csv' DELIMITER '	' CSV;
+\copy Production.WorkOrder FROM 'WorkOrder.csv' DELIMITER E'\t' CSV;
 SELECT 'Production.WorkOrderRouting';
-\copy Production.WorkOrderRouting FROM 'WorkOrderRouting.csv' DELIMITER '	' CSV;
+\copy Production.WorkOrderRouting FROM 'WorkOrderRouting.csv' DELIMITER E'\t' CSV;
 
 -- Calculated columns that needed to be there just for the CSV import
 ALTER TABLE Production.WorkOrder DROP COLUMN StockedQty;
@@ -943,15 +943,15 @@ CREATE SCHEMA Purchasing
 COMMENT ON SCHEMA Purchasing IS 'Contains objects related to vendors and purchase orders.';
 
 SELECT 'Purchasing.ProductVendor';
-\copy Purchasing.ProductVendor FROM 'ProductVendor.csv' DELIMITER '	' CSV;
+\copy Purchasing.ProductVendor FROM 'ProductVendor.csv' DELIMITER E'\t' CSV;
 SELECT 'Purchasing.PurchaseOrderDetail';
-\copy Purchasing.PurchaseOrderDetail FROM 'PurchaseOrderDetail.csv' DELIMITER '	' CSV;
+\copy Purchasing.PurchaseOrderDetail FROM 'PurchaseOrderDetail.csv' DELIMITER E'\t' CSV;
 SELECT 'Purchasing.PurchaseOrderHeader';
-\copy Purchasing.PurchaseOrderHeader FROM 'PurchaseOrderHeader.csv' DELIMITER '	' CSV;
+\copy Purchasing.PurchaseOrderHeader FROM 'PurchaseOrderHeader.csv' DELIMITER E'\t' CSV;
 SELECT 'Purchasing.ShipMethod';
-\copy Purchasing.ShipMethod FROM 'ShipMethod.csv' DELIMITER '	' CSV;
+\copy Purchasing.ShipMethod FROM 'ShipMethod.csv' DELIMITER E'\t' CSV;
 SELECT 'Purchasing.Vendor';
-\copy Purchasing.Vendor FROM 'Vendor.csv' DELIMITER '	' CSV;
+\copy Purchasing.Vendor FROM 'Vendor.csv' DELIMITER E'\t' CSV;
 
 -- Calculated columns that needed to be there just for the CSV import
 ALTER TABLE Purchasing.PurchaseOrderDetail DROP COLUMN LineTotal;
@@ -989,9 +989,9 @@ CREATE SCHEMA Sales
     ModifiedDate TIMESTAMP NOT NULL CONSTRAINT "DF_CurrencyRate_ModifiedDate" DEFAULT (NOW())
   )
   CREATE TABLE Customer(
-  CustomerID SERIAL NOT NULL, --  NOT FOR REPLICATION -- int
-  -- A customer may either be a person, a store, or a person who works for a store
-  PersonID INT NULL, -- If this customer represents a person, this is non-null
+    CustomerID SERIAL NOT NULL, --  NOT FOR REPLICATION -- int
+    -- A customer may either be a person, a store, or a person who works for a store
+    PersonID INT NULL, -- If this customer represents a person, this is non-null
     StoreID INT NULL,  -- If the customer is a store, or is associated with a store then this is non-null.
     TerritoryID INT NULL,
     AccountNumber VARCHAR, -- AS ISNULL('AW' + dbo.ufnLeadingZeros(CustomerID), ''),
@@ -1167,43 +1167,43 @@ CREATE SCHEMA Sales
 COMMENT ON SCHEMA Sales IS 'Contains objects related to customers, sales orders, and sales territories.';
 
 SELECT 'Sales.CountryRegionCurrency';
-\copy Sales.CountryRegionCurrency FROM 'CountryRegionCurrency.csv' DELIMITER '	' CSV;
+\copy Sales.CountryRegionCurrency FROM 'CountryRegionCurrency.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.CreditCard';
-\copy Sales.CreditCard FROM 'CreditCard.csv' DELIMITER '	' CSV;
+\copy Sales.CreditCard FROM 'CreditCard.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.Currency';
-\copy Sales.Currency FROM 'Currency.csv' DELIMITER '	' CSV;
+\copy Sales.Currency FROM 'Currency.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.CurrencyRate';
-\copy Sales.CurrencyRate FROM 'CurrencyRate.csv' DELIMITER '	' CSV;
+\copy Sales.CurrencyRate FROM 'CurrencyRate.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.Customer';
-\copy Sales.Customer FROM 'Customer.csv' DELIMITER '	' CSV;
+\copy Sales.Customer FROM 'Customer.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.PersonCreditCard';
-\copy Sales.PersonCreditCard FROM 'PersonCreditCard.csv' DELIMITER '	' CSV;
+\copy Sales.PersonCreditCard FROM 'PersonCreditCard.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.SalesOrderDetail';
-\copy Sales.SalesOrderDetail FROM 'SalesOrderDetail.csv' DELIMITER '	' CSV;
+\copy Sales.SalesOrderDetail FROM 'SalesOrderDetail.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.SalesOrderHeader';
-\copy Sales.SalesOrderHeader FROM 'SalesOrderHeader.csv' DELIMITER '	' CSV;
+\copy Sales.SalesOrderHeader FROM 'SalesOrderHeader.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.SalesOrderHeaderSalesReason';
-\copy Sales.SalesOrderHeaderSalesReason FROM 'SalesOrderHeaderSalesReason.csv' DELIMITER '	' CSV;
+\copy Sales.SalesOrderHeaderSalesReason FROM 'SalesOrderHeaderSalesReason.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.SalesPerson';
-\copy Sales.SalesPerson FROM 'SalesPerson.csv' DELIMITER '	' CSV;
+\copy Sales.SalesPerson FROM 'SalesPerson.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.SalesPersonQuotaHistory';
-\copy Sales.SalesPersonQuotaHistory FROM 'SalesPersonQuotaHistory.csv' DELIMITER '	' CSV;
+\copy Sales.SalesPersonQuotaHistory FROM 'SalesPersonQuotaHistory.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.SalesReason';
-\copy Sales.SalesReason FROM 'SalesReason.csv' DELIMITER '	' CSV;
+\copy Sales.SalesReason FROM 'SalesReason.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.SalesTaxRate';
-\copy Sales.SalesTaxRate FROM 'SalesTaxRate.csv' DELIMITER '	' CSV;
+\copy Sales.SalesTaxRate FROM 'SalesTaxRate.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.SalesTerritory';
-\copy Sales.SalesTerritory FROM 'SalesTerritory.csv' DELIMITER '	' CSV;
+\copy Sales.SalesTerritory FROM 'SalesTerritory.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.SalesTerritoryHistory';
-\copy Sales.SalesTerritoryHistory FROM 'SalesTerritoryHistory.csv' DELIMITER '	' CSV;
+\copy Sales.SalesTerritoryHistory FROM 'SalesTerritoryHistory.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.ShoppingCartItem';
-\copy Sales.ShoppingCartItem FROM 'ShoppingCartItem.csv' DELIMITER '	' CSV;
+\copy Sales.ShoppingCartItem FROM 'ShoppingCartItem.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.SpecialOffer';
-\copy Sales.SpecialOffer FROM 'SpecialOffer.csv' DELIMITER '	' CSV;
+\copy Sales.SpecialOffer FROM 'SpecialOffer.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.SpecialOfferProduct';
-\copy Sales.SpecialOfferProduct FROM 'SpecialOfferProduct.csv' DELIMITER '	' CSV;
+\copy Sales.SpecialOfferProduct FROM 'SpecialOfferProduct.csv' DELIMITER E'\t' CSV;
 SELECT 'Sales.Store';
-\copy Sales.Store FROM 'Store.csv' DELIMITER '	' CSV;
+\copy Sales.Store FROM 'Store.csv' DELIMITER E'\t' CSV;
 
 -- Calculated columns that needed to be there just for the CSV import
 ALTER TABLE Sales.Customer DROP COLUMN AccountNumber;
@@ -1215,6 +1215,8 @@ ALTER TABLE Sales.SalesOrderHeader DROP COLUMN SalesOrderNumber;
 -------------------------------------
 -- TABLE AND COLUMN COMMENTS
 -------------------------------------
+
+SET CLIENT_ENCODING=latin1;
 
 -- COMMENT ON TABLE dbo.AWBuildVersion IS 'Current version number of the AdventureWorks2012_CS sample database.';
 --   COMMENT ON COLUMN dbo.AWBuildVersion.SystemInformationID IS 'Primary key for AWBuildVersion records.';
@@ -3069,83 +3071,84 @@ FROM Purchasing.Vendor v
 
 
 -- Convenience views
-CREATE SCHEMA hr
-  CREATE VIEW d AS SELECT * FROM humanresources.department
-  CREATE VIEW e AS SELECT * FROM humanresources.employee
-  CREATE VIEW edh AS SELECT * FROM humanresources.employeedepartmenthistory
-  CREATE VIEW eph AS SELECT * FROM humanresources.employeepayhistory
-  CREATE VIEW jc AS SELECT * FROM humanresources.jobcandidate
-  CREATE VIEW s AS SELECT * FROM humanresources.shift
-;
+
 CREATE SCHEMA pe
-  CREATE VIEW a AS SELECT * FROM person.address
-  CREATE VIEW at AS SELECT * FROM person.addresstype
-  CREATE VIEW be AS SELECT * FROM person.businessentity
-  CREATE VIEW bea AS SELECT * FROM person.businessentityaddress
-  CREATE VIEW bec AS SELECT * FROM person.businessentitycontact
-  CREATE VIEW ct AS SELECT * FROM person.contacttype
+  CREATE VIEW a AS SELECT addressid AS id, * FROM person.address
+  CREATE VIEW at AS SELECT addresstypeid AS id, * FROM person.addresstype
+  CREATE VIEW be AS SELECT businessentityid AS id, * FROM person.businessentity
+  CREATE VIEW bea AS SELECT businessentityid AS id, * FROM person.businessentityaddress
+  CREATE VIEW bec AS SELECT businessentityid AS id, * FROM person.businessentitycontact
+  CREATE VIEW ct AS SELECT contacttypeid AS id, * FROM person.contacttype
   CREATE VIEW cr AS SELECT * FROM person.countryregion
-  CREATE VIEW e AS SELECT * FROM person.emailaddress
-  CREATE VIEW pa AS SELECT * FROM person.password
-  CREATE VIEW p AS SELECT * FROM person.person
-  CREATE VIEW pp AS SELECT * FROM person.personphone
-  CREATE VIEW pnt AS SELECT * FROM person.phonenumbertype
-  CREATE VIEW sp AS SELECT * FROM person.stateprovince
+  CREATE VIEW e AS SELECT emailaddressid AS id, * FROM person.emailaddress
+  CREATE VIEW pa AS SELECT businessentityid AS id, * FROM person.password
+  CREATE VIEW p AS SELECT businessentityid AS id, * FROM person.person
+  CREATE VIEW pp AS SELECT businessentityid AS id, * FROM person.personphone
+  CREATE VIEW pnt AS SELECT phonenumbertypeid AS id, * FROM person.phonenumbertype
+  CREATE VIEW sp AS SELECT stateprovinceid AS id, * FROM person.stateprovince
+;
+CREATE SCHEMA hr
+  CREATE VIEW d AS SELECT departmentid AS id, * FROM humanresources.department
+  CREATE VIEW e AS SELECT businessentityid AS id, * FROM humanresources.employee
+  CREATE VIEW edh AS SELECT businessentityid AS id, * FROM humanresources.employeedepartmenthistory
+  CREATE VIEW eph AS SELECT businessentityid AS id, * FROM humanresources.employeepayhistory
+  CREATE VIEW jc AS SELECT jobcandidateid AS id, * FROM humanresources.jobcandidate
+  CREATE VIEW s AS SELECT shiftid AS id, * FROM humanresources.shift
 ;
 CREATE SCHEMA pr
-  CREATE VIEW bom AS SELECT * FROM production.billofmaterials
-  CREATE VIEW c AS SELECT * FROM production.culture
+  CREATE VIEW bom AS SELECT billofmaterialsid AS id, * FROM production.billofmaterials
+  CREATE VIEW c AS SELECT cultureid AS id, * FROM production.culture
   CREATE VIEW d AS SELECT * FROM production.document
-  CREATE VIEW i AS SELECT * FROM production.illustration
-  CREATE VIEW l AS SELECT * FROM production.location
-  CREATE VIEW p AS SELECT * FROM production.product
-  CREATE VIEW pc AS SELECT * FROM production.productcategory
-  CREATE VIEW pch AS SELECT * FROM production.productcosthistory
-  CREATE VIEW pd AS SELECT * FROM production.productdescription
-  CREATE VIEW pdoc AS SELECT * FROM production.productdocument
-  CREATE VIEW pi AS SELECT * FROM production.productinventory
-  CREATE VIEW plph AS SELECT * FROM production.productlistpricehistory
-  CREATE VIEW pm AS SELECT * FROM production.productmodel
+  CREATE VIEW i AS SELECT illustrationid AS id, * FROM production.illustration
+  CREATE VIEW l AS SELECT locationid AS id, * FROM production.location
+  CREATE VIEW p AS SELECT productid AS id, * FROM production.product
+  CREATE VIEW pc AS SELECT productcategoryid AS id, * FROM production.productcategory
+  CREATE VIEW pch AS SELECT productid AS id, * FROM production.productcosthistory
+  CREATE VIEW pd AS SELECT productdescriptionid AS id, * FROM production.productdescription
+  CREATE VIEW pdoc AS SELECT productid AS id, * FROM production.productdocument
+  CREATE VIEW pi AS SELECT productid AS id, * FROM production.productinventory
+  CREATE VIEW plph AS SELECT productid AS id, * FROM production.productlistpricehistory
+  CREATE VIEW pm AS SELECT productmodelid AS id, * FROM production.productmodel
   CREATE VIEW pmi AS SELECT * FROM production.productmodelillustration
   CREATE VIEW pmpdc AS SELECT * FROM production.productmodelproductdescriptionculture
-  CREATE VIEW pp AS SELECT * FROM production.productphoto
+  CREATE VIEW pp AS SELECT productphotoid AS id, * FROM production.productphoto
   CREATE VIEW ppp AS SELECT * FROM production.productproductphoto
-  CREATE VIEW pr AS SELECT * FROM production.productreview
-  CREATE VIEW psc AS SELECT * FROM production.productsubcategory
-  CREATE VIEW sr AS SELECT * FROM production.scrapreason
-  CREATE VIEW th AS SELECT * FROM production.transactionhistory
-  CREATE VIEW tha AS SELECT * FROM production.transactionhistoryarchive
-  CREATE VIEW um AS SELECT * FROM production.unitmeasure
-  CREATE VIEW w AS SELECT * FROM production.workorder
-  CREATE VIEW wr AS SELECT * FROM production.workorderrouting
+  CREATE VIEW pr AS SELECT productreviewid AS id, * FROM production.productreview
+  CREATE VIEW psc AS SELECT productsubcategoryid AS id, * FROM production.productsubcategory
+  CREATE VIEW sr AS SELECT scrapreasonid AS id, * FROM production.scrapreason
+  CREATE VIEW th AS SELECT transactionid AS id, * FROM production.transactionhistory
+  CREATE VIEW tha AS SELECT transactionid AS id, * FROM production.transactionhistoryarchive
+  CREATE VIEW um AS SELECT unitmeasurecode AS id, * FROM production.unitmeasure
+  CREATE VIEW w AS SELECT workorderid AS id, * FROM production.workorder
+  CREATE VIEW wr AS SELECT workorderid AS id, * FROM production.workorderrouting
 ;
 CREATE SCHEMA pu
-  CREATE VIEW pv AS SELECT * FROM purchasing.productvendor
-  CREATE VIEW pod AS SELECT * FROM purchasing.purchaseorderdetail
-  CREATE VIEW poh AS SELECT * FROM purchasing.purchaseorderheader
-  CREATE VIEW sm AS SELECT * FROM purchasing.shipmethod
-  CREATE VIEW v AS SELECT * FROM purchasing.vendor
+  CREATE VIEW pv AS SELECT productid AS id, * FROM purchasing.productvendor
+  CREATE VIEW pod AS SELECT purchaseorderdetailid AS id, * FROM purchasing.purchaseorderdetail
+  CREATE VIEW poh AS SELECT purchaseorderid AS id, * FROM purchasing.purchaseorderheader
+  CREATE VIEW sm AS SELECT shipmethodid AS id, * FROM purchasing.shipmethod
+  CREATE VIEW v AS SELECT businessentityid AS id, * FROM purchasing.vendor
 ;
 CREATE SCHEMA sa
   CREATE VIEW crc AS SELECT * FROM sales.countryregioncurrency
-  CREATE VIEW cc AS SELECT * FROM sales.creditcard
-  CREATE VIEW cu AS SELECT * FROM sales.currency
+  CREATE VIEW cc AS SELECT creditcardid AS id, * FROM sales.creditcard
+  CREATE VIEW cu AS SELECT currencycode AS id, * FROM sales.currency
   CREATE VIEW cr AS SELECT * FROM sales.currencyrate
-  CREATE VIEW c AS SELECT * FROM sales.customer
-  CREATE VIEW pcc AS SELECT * FROM sales.personcreditcard
-  CREATE VIEW sod AS SELECT * FROM sales.salesorderdetail
-  CREATE VIEW soh AS SELECT * FROM sales.salesorderheader
+  CREATE VIEW c AS SELECT customerid AS id, * FROM sales.customer
+  CREATE VIEW pcc AS SELECT businessentityid AS id, * FROM sales.personcreditcard
+  CREATE VIEW sod AS SELECT salesorderdetailid AS id, * FROM sales.salesorderdetail
+  CREATE VIEW soh AS SELECT salesorderid AS id, * FROM sales.salesorderheader
   CREATE VIEW sohsr AS SELECT * FROM sales.salesorderheadersalesreason
-  CREATE VIEW sp AS SELECT * FROM sales.salesperson
-  CREATE VIEW spqh AS SELECT * FROM sales.salespersonquotahistory
-  CREATE VIEW sr AS SELECT * FROM sales.salesreason
-  CREATE VIEW tr AS SELECT * FROM sales.salestaxrate
-  CREATE VIEW st AS SELECT * FROM sales.salesterritory
-  CREATE VIEW sth AS SELECT * FROM sales.salesterritoryhistory
-  CREATE VIEW sci AS SELECT * FROM sales.shoppingcartitem
-  CREATE VIEW so AS SELECT * FROM sales.specialoffer
-  CREATE VIEW sop AS SELECT * FROM sales.specialofferproduct
-  CREATE VIEW s AS SELECT * FROM sales.store
+  CREATE VIEW sp AS SELECT businessentityid AS id, * FROM sales.salesperson
+  CREATE VIEW spqh AS SELECT businessentityid AS id, * FROM sales.salespersonquotahistory
+  CREATE VIEW sr AS SELECT salesreasonid AS id, * FROM sales.salesreason
+  CREATE VIEW tr AS SELECT salestaxrateid AS id, * FROM sales.salestaxrate
+  CREATE VIEW st AS SELECT territoryid AS id, * FROM sales.salesterritory
+  CREATE VIEW sth AS SELECT territoryid AS id, * FROM sales.salesterritoryhistory
+  CREATE VIEW sci AS SELECT shoppingcartitemid AS id, * FROM sales.shoppingcartitem
+  CREATE VIEW so AS SELECT specialofferid AS id, * FROM sales.specialoffer
+  CREATE VIEW sop AS SELECT specialofferid AS id, * FROM sales.specialofferproduct
+  CREATE VIEW s AS SELECT businessentityid AS id, * FROM sales.store
 ;
 
 

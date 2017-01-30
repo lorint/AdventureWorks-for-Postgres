@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 # AdventureWorks for Postgres
 #  by Lorin Thwaits
 
@@ -56,7 +58,8 @@ Dir.glob('./*.csv') do |csv_file|
         text << line.gsub(/\"/, "\"\"").gsub("\r\n", "\\n")
       end
     else
-      output << line.gsub(/\"/, "\"\"").gsub(/\&\|\n/, "\n").gsub(/\&\|\r\n/, "\n")
+      # The last gsub makes everything compatible with Windows -- change \r\n into just \n
+      output << line.gsub(/\"/, "\"\"").gsub(/\&\|\n/, "\n").gsub(/\&\|\r\n/, "\n").gsub(/\r\n/, "\n")
     end
   end
   if is_needed

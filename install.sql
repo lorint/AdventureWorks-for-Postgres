@@ -17,11 +17,20 @@
 --   psql -d Adventureworks < install.sql
 
 -- All 68 tables are properly set up.
--- As well, 11 of the 20 views are established.  The ones not built are those that rely on
--- XML functions like value and ref.
+-- As well, 18 of the 20 views are established.  The two that are not built are:
+--   vProductModelInstructions         (somewhat complex XML example)
+--   vSalesPersonSalesByFiscalYears    (demonstrates use of PIVOT)
+-- The next version of this script will include these two views, and thus be complete.
 
 -- Enjoy!
 
+
+-- -- Disconnect all other existing connections
+-- SELECT pg_terminate_backend(pid)
+--   FROM pg_stat_activity
+--   WHERE pid <> pg_backend_pid() AND datname='Adventureworks';
+
+\pset tuples_only on
 
 -- Support to auto-generate UUIDs (aka GUIDs)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -59,8 +68,8 @@ CREATE SCHEMA Person
     LastName "Name" NOT NULL,
     Suffix varchar(10) NULL,
     EmailPromotion INT NOT NULL CONSTRAINT "DF_Person_EmailPromotion" DEFAULT (0),
-    AdditionalContactInfo TEXT NULL, -- XML("AdditionalContactInfoSchemaCollection"),
-    Demographics TEXT NULL, -- XML("IndividualSurveySchemaCollection"),
+    AdditionalContactInfo XML NULL, -- XML("AdditionalContactInfoSchemaCollection"),
+    Demographics XML NULL, -- XML("IndividualSurveySchemaCollection"),
     rowguid uuid NOT NULL CONSTRAINT "DF_Person_rowguid" DEFAULT (uuid_generate_v1()), -- ROWGUIDCOL
     ModifiedDate TIMESTAMP NOT NULL CONSTRAINT "DF_Person_ModifiedDate" DEFAULT (NOW()),
     CONSTRAINT "CK_Person_EmailPromotion" CHECK (EmailPromotion BETWEEN 0 AND 2),
@@ -145,31 +154,31 @@ CREATE SCHEMA Person
 
 COMMENT ON SCHEMA Person IS 'Contains objects related to names and addresses of customers, vendors, and employees';
 
-SELECT 'Person.BusinessEntity';
+SELECT 'Copying data into Person.BusinessEntity';
 \copy Person.BusinessEntity FROM './BusinessEntity.csv' DELIMITER E'\t' CSV;
-SELECT 'Person.Person';
+SELECT 'Copying data into Person.Person';
 \copy Person.Person FROM './Person.csv' DELIMITER E'\t' CSV;
-SELECT 'Person.StateProvince';
+SELECT 'Copying data into Person.StateProvince';
 \copy Person.StateProvince FROM './StateProvince.csv' DELIMITER E'\t' CSV;
-SELECT 'Person.Address';
+SELECT 'Copying data into Person.Address';
 \copy Person.Address FROM './Address.csv' DELIMITER E'\t' CSV ENCODING 'latin1';
-SELECT 'Person.AddressType';
+SELECT 'Copying data into Person.AddressType';
 \copy Person.AddressType FROM './AddressType.csv' DELIMITER E'\t' CSV;
-SELECT 'Person.BusinessEntityAddress';
+SELECT 'Copying data into Person.BusinessEntityAddress';
 \copy Person.BusinessEntityAddress FROM './BusinessEntityAddress.csv' DELIMITER E'\t' CSV;
-SELECT 'Person.ContactType';
+SELECT 'Copying data into Person.ContactType';
 \copy Person.ContactType FROM './ContactType.csv' DELIMITER E'\t' CSV;
-SELECT 'Person.BusinessEntityContact';
+SELECT 'Copying data into Person.BusinessEntityContact';
 \copy Person.BusinessEntityContact FROM './BusinessEntityContact.csv' DELIMITER E'\t' CSV;
-SELECT 'Person.EmailAddress';
+SELECT 'Copying data into Person.EmailAddress';
 \copy Person.EmailAddress FROM './EmailAddress.csv' DELIMITER E'\t' CSV;
-SELECT 'Person.Password';
+SELECT 'Copying data into Person.Password';
 \copy Person.Password FROM './Password.csv' DELIMITER E'\t' CSV;
-SELECT 'Person.PhoneNumberType';
+SELECT 'Copying data into Person.PhoneNumberType';
 \copy Person.PhoneNumberType FROM './PhoneNumberType.csv' DELIMITER E'\t' CSV;
-SELECT 'Person.PersonPhone';
+SELECT 'Copying data into Person.PersonPhone';
 \copy Person.PersonPhone FROM './PersonPhone.csv' DELIMITER E'\t' CSV;
-SELECT 'Person.CountryRegion';
+SELECT 'Copying data into Person.CountryRegion';
 \copy Person.CountryRegion FROM './CountryRegion.csv' DELIMITER E'\t' CSV;
 
 
@@ -225,7 +234,7 @@ CREATE SCHEMA HumanResources
   CREATE TABLE JobCandidate(
     JobCandidateID SERIAL NOT NULL, -- int
     BusinessEntityID INT NULL,
-    Resume varchar NULL, -- XML(HRResumeSchemaCollection)
+    Resume XML NULL, -- XML(HRResumeSchemaCollection)
     ModifiedDate TIMESTAMP NOT NULL CONSTRAINT "DF_JobCandidate_ModifiedDate" DEFAULT (NOW())
   )
   CREATE TABLE Shift(
@@ -238,17 +247,17 @@ CREATE SCHEMA HumanResources
 
 COMMENT ON SCHEMA HumanResources IS 'Contains objects related to employees and departments.';
 
-SELECT 'HumanResources.Department';
+SELECT 'Copying data into HumanResources.Department';
 \copy HumanResources.Department FROM './Department.csv' DELIMITER E'\t' CSV;
-SELECT 'HumanResources.Employee';
+SELECT 'Copying data into HumanResources.Employee';
 \copy HumanResources.Employee FROM './Employee.csv' DELIMITER E'\t' CSV;
-SELECT 'HumanResources.EmployeeDepartmentHistory';
+SELECT 'Copying data into HumanResources.EmployeeDepartmentHistory';
 \copy HumanResources.EmployeeDepartmentHistory FROM './EmployeeDepartmentHistory.csv' DELIMITER E'\t' CSV;
-SELECT 'HumanResources.EmployeePayHistory';
+SELECT 'Copying data into HumanResources.EmployeePayHistory';
 \copy HumanResources.EmployeePayHistory FROM './EmployeePayHistory.csv' DELIMITER E'\t' CSV;
-SELECT 'HumanResources.JobCandidate';
+SELECT 'Copying data into HumanResources.JobCandidate';
 \copy HumanResources.JobCandidate FROM './JobCandidate.csv' DELIMITER E'\t' CSV ENCODING 'latin1';
-SELECT 'HumanResources.Shift';
+SELECT 'Copying data into HumanResources.Shift';
 \copy HumanResources.Shift FROM './Shift.csv' DELIMITER E'\t' CSV;
 
 -- Calculated column that needed to be there just for the CSV import
@@ -393,8 +402,8 @@ CREATE SCHEMA Production
   CREATE TABLE ProductModel(
     ProductModelID SERIAL NOT NULL, -- int
     Name "Name" NOT NULL,
-    CatalogDescription varchar NULL, -- XML(Production.ProductDescriptionSchemaCollection)
-    Instructions varchar NULL, -- XML(Production.ManuInstructionsSchemaCollection)
+    CatalogDescription XML NULL, -- XML(Production.ProductDescriptionSchemaCollection)
+    Instructions XML NULL, -- XML(Production.ManuInstructionsSchemaCollection)
     rowguid uuid NOT NULL CONSTRAINT "DF_ProductModel_rowguid" DEFAULT (uuid_generate_v1()), -- ROWGUIDCOL
     ModifiedDate TIMESTAMP NOT NULL CONSTRAINT "DF_ProductModel_ModifiedDate" DEFAULT (NOW())
   )
@@ -486,7 +495,7 @@ CREATE SCHEMA Production
   )
   CREATE TABLE Illustration(
     IllustrationID SERIAL NOT NULL, -- int
-    Diagram varchar NULL,  -- XML
+    Diagram XML NULL,
     ModifiedDate TIMESTAMP NOT NULL CONSTRAINT "DF_Illustration_ModifiedDate" DEFAULT (NOW())
   )
   CREATE TABLE ProductModelIllustration(
@@ -597,45 +606,45 @@ CREATE SCHEMA Production
 
 COMMENT ON SCHEMA Production IS 'Contains objects related to products, inventory, and manufacturing.';
 
-SELECT 'Production.BillOfMaterials';
+SELECT 'Copying data into Production.BillOfMaterials';
 \copy Production.BillOfMaterials FROM 'BillOfMaterials.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.Culture';
+SELECT 'Copying data into Production.Culture';
 \copy Production.Culture FROM 'Culture.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.Document';
+SELECT 'Copying data into Production.Document';
 \copy Production.Document FROM 'Document.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.ProductCategory';
+SELECT 'Copying data into Production.ProductCategory';
 \copy Production.ProductCategory FROM 'ProductCategory.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.ProductSubcategory';
+SELECT 'Copying data into Production.ProductSubcategory';
 \copy Production.ProductSubcategory FROM 'ProductSubcategory.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.ProductModel';
+SELECT 'Copying data into Production.ProductModel';
 \copy Production.ProductModel FROM 'ProductModel.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.Product';
+SELECT 'Copying data into Production.Product';
 \copy Production.Product FROM 'Product.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.ProductCostHistory';
+SELECT 'Copying data into Production.ProductCostHistory';
 \copy Production.ProductCostHistory FROM 'ProductCostHistory.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.ProductDescription';
+SELECT 'Copying data into Production.ProductDescription';
 \copy Production.ProductDescription FROM 'ProductDescription.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.ProductDocument';
+SELECT 'Copying data into Production.ProductDocument';
 \copy Production.ProductDocument FROM 'ProductDocument.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.Location';
+SELECT 'Copying data into Production.Location';
 \copy Production.Location FROM 'Location.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.ProductInventory';
+SELECT 'Copying data into Production.ProductInventory';
 \copy Production.ProductInventory FROM 'ProductInventory.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.ProductListPriceHistory';
+SELECT 'Copying data into Production.ProductListPriceHistory';
 \copy Production.ProductListPriceHistory FROM 'ProductListPriceHistory.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.Illustration';
+SELECT 'Copying data into Production.Illustration';
 \copy Production.Illustration FROM 'Illustration.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.ProductModelIllustration';
+SELECT 'Copying data into Production.ProductModelIllustration';
 \copy Production.ProductModelIllustration FROM 'ProductModelIllustration.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.ProductModelProductDescriptionCulture';
+SELECT 'Copying data into Production.ProductModelProductDescriptionCulture';
 \copy Production.ProductModelProductDescriptionCulture FROM 'ProductModelProductDescriptionCulture.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.ProductPhoto';
+SELECT 'Copying data into Production.ProductPhoto';
 \copy Production.ProductPhoto FROM 'ProductPhoto.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.ProductProductPhoto';
+SELECT 'Copying data into Production.ProductProductPhoto';
 \copy Production.ProductProductPhoto FROM 'ProductProductPhoto.csv' DELIMITER E'\t' CSV;
 
 -- This doesn't work:
--- SELECT 'Production.ProductReview';
+-- SELECT 'Copying data into Production.ProductReview';
 -- \copy Production.ProductReview FROM 'ProductReview.csv' DELIMITER '  ' CSV;
 
 -- so instead ...
@@ -678,17 +687,17 @@ The Road-550-W frame is available in a variety of sizes and colors and has the s
 we think that after a test drive you''l find the quality and performance above and beyond . You''ll have a grin on your face and be itching to get out on the road for more. While designed for serious road racing, the Road-550-W would be an excellent choice for just about any terrain and 
 any level of experience. It''s a huge step in the right direction for female cyclists and well worth your consideration and hard-earned money.', '2013-11-15 00:00:00');
 
-SELECT 'Production.ScrapReason';
+SELECT 'Copying data into Production.ScrapReason';
 \copy Production.ScrapReason FROM 'ScrapReason.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.TransactionHistory';
+SELECT 'Copying data into Production.TransactionHistory';
 \copy Production.TransactionHistory FROM 'TransactionHistory.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.TransactionHistoryArchive';
+SELECT 'Copying data into Production.TransactionHistoryArchive';
 \copy Production.TransactionHistoryArchive FROM 'TransactionHistoryArchive.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.UnitMeasure';
+SELECT 'Copying data into Production.UnitMeasure';
 \copy Production.UnitMeasure FROM 'UnitMeasure.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.WorkOrder';
+SELECT 'Copying data into Production.WorkOrder';
 \copy Production.WorkOrder FROM 'WorkOrder.csv' DELIMITER E'\t' CSV;
-SELECT 'Production.WorkOrderRouting';
+SELECT 'Copying data into Production.WorkOrderRouting';
 \copy Production.WorkOrderRouting FROM 'WorkOrderRouting.csv' DELIMITER E'\t' CSV;
 
 -- Calculated columns that needed to be there just for the CSV import
@@ -942,15 +951,15 @@ CREATE SCHEMA Purchasing
 
 COMMENT ON SCHEMA Purchasing IS 'Contains objects related to vendors and purchase orders.';
 
-SELECT 'Purchasing.ProductVendor';
+SELECT 'Copying data into Purchasing.ProductVendor';
 \copy Purchasing.ProductVendor FROM 'ProductVendor.csv' DELIMITER E'\t' CSV;
-SELECT 'Purchasing.PurchaseOrderDetail';
+SELECT 'Copying data into Purchasing.PurchaseOrderDetail';
 \copy Purchasing.PurchaseOrderDetail FROM 'PurchaseOrderDetail.csv' DELIMITER E'\t' CSV;
-SELECT 'Purchasing.PurchaseOrderHeader';
+SELECT 'Copying data into Purchasing.PurchaseOrderHeader';
 \copy Purchasing.PurchaseOrderHeader FROM 'PurchaseOrderHeader.csv' DELIMITER E'\t' CSV;
-SELECT 'Purchasing.ShipMethod';
+SELECT 'Copying data into Purchasing.ShipMethod';
 \copy Purchasing.ShipMethod FROM 'ShipMethod.csv' DELIMITER E'\t' CSV;
-SELECT 'Purchasing.Vendor';
+SELECT 'Copying data into Purchasing.Vendor';
 \copy Purchasing.Vendor FROM 'Vendor.csv' DELIMITER E'\t' CSV;
 
 -- Calculated columns that needed to be there just for the CSV import
@@ -1159,50 +1168,50 @@ CREATE SCHEMA Sales
     BusinessEntityID INT NOT NULL,
     Name "Name" NOT NULL,
     SalesPersonID INT NULL,
-    Demographics varchar NULL, -- XML(Sales.StoreSurveySchemaCollection)
+    Demographics XML NULL, -- XML(Sales.StoreSurveySchemaCollection)
     rowguid uuid NOT NULL CONSTRAINT "DF_Store_rowguid" DEFAULT (uuid_generate_v1()), -- ROWGUIDCOL
     ModifiedDate TIMESTAMP NOT NULL CONSTRAINT "DF_Store_ModifiedDate" DEFAULT (NOW())
   );
 
 COMMENT ON SCHEMA Sales IS 'Contains objects related to customers, sales orders, and sales territories.';
 
-SELECT 'Sales.CountryRegionCurrency';
+SELECT 'Copying data into Sales.CountryRegionCurrency';
 \copy Sales.CountryRegionCurrency FROM 'CountryRegionCurrency.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.CreditCard';
+SELECT 'Copying data into Sales.CreditCard';
 \copy Sales.CreditCard FROM 'CreditCard.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.Currency';
+SELECT 'Copying data into Sales.Currency';
 \copy Sales.Currency FROM 'Currency.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.CurrencyRate';
+SELECT 'Copying data into Sales.CurrencyRate';
 \copy Sales.CurrencyRate FROM 'CurrencyRate.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.Customer';
+SELECT 'Copying data into Sales.Customer';
 \copy Sales.Customer FROM 'Customer.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.PersonCreditCard';
+SELECT 'Copying data into Sales.PersonCreditCard';
 \copy Sales.PersonCreditCard FROM 'PersonCreditCard.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.SalesOrderDetail';
+SELECT 'Copying data into Sales.SalesOrderDetail';
 \copy Sales.SalesOrderDetail FROM 'SalesOrderDetail.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.SalesOrderHeader';
+SELECT 'Copying data into Sales.SalesOrderHeader';
 \copy Sales.SalesOrderHeader FROM 'SalesOrderHeader.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.SalesOrderHeaderSalesReason';
+SELECT 'Copying data into Sales.SalesOrderHeaderSalesReason';
 \copy Sales.SalesOrderHeaderSalesReason FROM 'SalesOrderHeaderSalesReason.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.SalesPerson';
+SELECT 'Copying data into Sales.SalesPerson';
 \copy Sales.SalesPerson FROM 'SalesPerson.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.SalesPersonQuotaHistory';
+SELECT 'Copying data into Sales.SalesPersonQuotaHistory';
 \copy Sales.SalesPersonQuotaHistory FROM 'SalesPersonQuotaHistory.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.SalesReason';
+SELECT 'Copying data into Sales.SalesReason';
 \copy Sales.SalesReason FROM 'SalesReason.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.SalesTaxRate';
+SELECT 'Copying data into Sales.SalesTaxRate';
 \copy Sales.SalesTaxRate FROM 'SalesTaxRate.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.SalesTerritory';
+SELECT 'Copying data into Sales.SalesTerritory';
 \copy Sales.SalesTerritory FROM 'SalesTerritory.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.SalesTerritoryHistory';
+SELECT 'Copying data into Sales.SalesTerritoryHistory';
 \copy Sales.SalesTerritoryHistory FROM 'SalesTerritoryHistory.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.ShoppingCartItem';
+SELECT 'Copying data into Sales.ShoppingCartItem';
 \copy Sales.ShoppingCartItem FROM 'ShoppingCartItem.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.SpecialOffer';
+SELECT 'Copying data into Sales.SpecialOffer';
 \copy Sales.SpecialOffer FROM 'SpecialOffer.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.SpecialOfferProduct';
+SELECT 'Copying data into Sales.SpecialOfferProduct';
 \copy Sales.SpecialOfferProduct FROM 'SpecialOfferProduct.csv' DELIMITER E'\t' CSV;
-SELECT 'Sales.Store';
+SELECT 'Copying data into Sales.Store';
 \copy Sales.Store FROM 'Store.csv' DELIMITER E'\t' CSV;
 
 -- Calculated columns that needed to be there just for the CSV import
@@ -2122,10 +2131,9 @@ ALTER TABLE Production.BillOfMaterials ADD
     CONSTRAINT "FK_BillOfMaterials_UnitMeasure_UnitMeasureCode" FOREIGN KEY
     (UnitMeasureCode) REFERENCES Production.UnitMeasure(UnitMeasureCode);
 
--- Key (addressid)=(1) is not present in table "address"
--- ALTER TABLE Person.BusinessEntityAddress ADD
---     CONSTRAINT "FK_BusinessEntityAddress_Address_AddressID" FOREIGN KEY
---     (AddressID) REFERENCES Person.Address(AddressID);
+ALTER TABLE Person.BusinessEntityAddress ADD
+    CONSTRAINT "FK_BusinessEntityAddress_Address_AddressID" FOREIGN KEY
+    (AddressID) REFERENCES Person.Address(AddressID);
 ALTER TABLE Person.BusinessEntityAddress ADD
     CONSTRAINT "FK_BusinessEntityAddress_AddressType_AddressTypeID" FOREIGN KEY
     (AddressTypeID) REFERENCES Person.AddressType(AddressTypeID);
@@ -2225,10 +2233,9 @@ ALTER TABLE Production.Product ADD
 ALTER TABLE Production.Product ADD
     CONSTRAINT "FK_Product_UnitMeasure_WeightUnitMeasureCode" FOREIGN KEY
     (WeightUnitMeasureCode) REFERENCES Production.UnitMeasure(UnitMeasureCode);
--- Key (productmodelid)=(6) is not present in table "productmodel"
--- ALTER TABLE Production.Product ADD
---     CONSTRAINT "FK_Product_ProductModel_ProductModelID" FOREIGN KEY
---     (ProductModelID) REFERENCES Production.ProductModel(ProductModelID);
+ALTER TABLE Production.Product ADD
+    CONSTRAINT "FK_Product_ProductModel_ProductModelID" FOREIGN KEY
+    (ProductModelID) REFERENCES Production.ProductModel(ProductModelID);
 ALTER TABLE Production.Product ADD
     CONSTRAINT "FK_Product_ProductSubcategory_ProductSubcategoryID" FOREIGN KEY
     (ProductSubcategoryID) REFERENCES Production.ProductSubcategory(ProductSubcategoryID);
@@ -2240,10 +2247,9 @@ ALTER TABLE Production.ProductCostHistory ADD
 ALTER TABLE Production.ProductDocument ADD
     CONSTRAINT "FK_ProductDocument_Product_ProductID" FOREIGN KEY
     (ProductID) REFERENCES Production.Product(ProductID);
--- Key (documentnode)=(6AC0) is not present in table "document"
--- ALTER TABLE Production.ProductDocument ADD
---     CONSTRAINT "FK_ProductDocument_Document_DocumentNode" FOREIGN KEY
---     (DocumentNode) REFERENCES Production.Document(DocumentNode);
+ALTER TABLE Production.ProductDocument ADD
+    CONSTRAINT "FK_ProductDocument_Document_DocumentNode" FOREIGN KEY
+    (DocumentNode) REFERENCES Production.Document(DocumentNode);
 
 ALTER TABLE Production.ProductInventory ADD
     CONSTRAINT "FK_ProductInventory_Location_LocationID" FOREIGN KEY
@@ -2256,10 +2262,9 @@ ALTER TABLE Production.ProductListPriceHistory ADD
     CONSTRAINT "FK_ProductListPriceHistory_Product_ProductID" FOREIGN KEY
     (ProductID) REFERENCES Production.Product(ProductID);
 
--- Key (productmodelid)=(7) is not present in table "productmodel"
--- ALTER TABLE Production.ProductModelIllustration ADD
---     CONSTRAINT "FK_ProductModelIllustration_ProductModel_ProductModelID" FOREIGN KEY
---     (ProductModelID) REFERENCES Production.ProductModel(ProductModelID);
+ALTER TABLE Production.ProductModelIllustration ADD
+    CONSTRAINT "FK_ProductModelIllustration_ProductModel_ProductModelID" FOREIGN KEY
+    (ProductModelID) REFERENCES Production.ProductModel(ProductModelID);
 ALTER TABLE Production.ProductModelIllustration ADD
     CONSTRAINT "FK_ProductModelIllustration_Illustration_IllustrationID" FOREIGN KEY
     (IllustrationID) REFERENCES Production.Illustration(IllustrationID);
@@ -2270,10 +2275,9 @@ ALTER TABLE Production.ProductModelProductDescriptionCulture ADD
 ALTER TABLE Production.ProductModelProductDescriptionCulture ADD
     CONSTRAINT "FK_ProductModelProductDescriptionCulture_Culture_CultureID" FOREIGN KEY
     (CultureID) REFERENCES Production.Culture(CultureID);
--- Key (productmodelid)=(1) is not present in table "productmodel"
--- ALTER TABLE Production.ProductModelProductDescriptionCulture ADD
---     CONSTRAINT "FK_ProductModelProductDescriptionCulture_ProductModel_ProductMo" FOREIGN KEY
---     (ProductModelID) REFERENCES Production.ProductModel(ProductModelID);
+ALTER TABLE Production.ProductModelProductDescriptionCulture ADD
+    CONSTRAINT "FK_ProductModelProductDescriptionCulture_ProductModel_ProductMo" FOREIGN KEY
+    (ProductModelID) REFERENCES Production.ProductModel(ProductModelID);
 
 ALTER TABLE Production.ProductProductPhoto ADD
     CONSTRAINT "FK_ProductProductPhoto_Product_ProductID" FOREIGN KEY
@@ -2435,6 +2439,9 @@ ALTER TABLE Production.WorkOrderRouting ADD
 -- VIEWS
 -------------------------------------
 
+-- -- Fun to see the difference with XML-oriented queries.
+-- -- First here's an original MSSQL query:
+
 -- CREATE VIEW [Person].[vAdditionalContactInfo]
 -- AS
 -- SELECT
@@ -2484,6 +2491,52 @@ ALTER TABLE Production.WorkOrderRouting ADD
 -- WHERE [AdditionalContactInfo] IS NOT NULL;
 
 
+-- And now the Postgres version, which is a little more tidy:
+
+CREATE VIEW Person.vAdditionalContactInfo
+AS
+SELECT
+    p.BusinessEntityID
+    ,p.FirstName
+    ,p.MiddleName
+    ,p.LastName
+    ,(xpath('(act:telephoneNumber)[1]/act:number/text()',                node, '{{act,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ContactTypes}}'))[1]
+               AS TelephoneNumber
+    ,BTRIM(
+     (xpath('(act:telephoneNumber)[1]/act:SpecialInstructions/text()',   node, '{{act,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ContactTypes}}'))[1]::VARCHAR)
+               AS TelephoneSpecialInstructions
+    ,(xpath('(act:homePostalAddress)[1]/act:Street/text()',              node, '{{act,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ContactTypes}}'))[1]
+               AS Street
+    ,(xpath('(act:homePostalAddress)[1]/act:City/text()',                node, '{{act,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ContactTypes}}'))[1]
+               AS City
+    ,(xpath('(act:homePostalAddress)[1]/act:StateProvince/text()',       node, '{{act,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ContactTypes}}'))[1]
+               AS StateProvince
+    ,(xpath('(act:homePostalAddress)[1]/act:PostalCode/text()',          node, '{{act,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ContactTypes}}'))[1]
+               AS PostalCode
+    ,(xpath('(act:homePostalAddress)[1]/act:CountryRegion/text()',       node, '{{act,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ContactTypes}}'))[1]
+               AS CountryRegion
+    ,(xpath('(act:homePostalAddress)[1]/act:SpecialInstructions/text()', node, '{{act,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ContactTypes}}'))[1]
+               AS HomeAddressSpecialInstructions
+    ,(xpath('(act:eMail)[1]/act:eMailAddress/text()',                    node, '{{act,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ContactTypes}}'))[1]
+               AS EMailAddress
+    ,BTRIM(
+     (xpath('(act:eMail)[1]/act:SpecialInstructions/text()',             node, '{{act,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ContactTypes}}'))[1]::VARCHAR)
+               AS EMailSpecialInstructions
+    ,(xpath('((act:eMail)[1]/act:SpecialInstructions/act:telephoneNumber)[1]/act:number/text()', node, '{{act,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ContactTypes}}'))[1]
+               AS EMailTelephoneNumber
+    ,p.rowguid
+    ,p.ModifiedDate
+FROM Person.Person AS p
+  LEFT OUTER JOIN
+    (SELECT
+      BusinessEntityID
+      ,UNNEST(xpath('/ci:AdditionalContactInfo',
+        additionalcontactinfo,
+        '{{ci,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ContactInfo}}')) AS node
+    FROM Person.Person
+    WHERE AdditionalContactInfo IS NOT NULL) AS additional
+  ON p.BusinessEntityID = additional.BusinessEntityID;
+
 CREATE VIEW HumanResources.vEmployee
 AS
 SELECT
@@ -2507,20 +2560,20 @@ SELECT
     ,p.AdditionalContactInfo
 FROM HumanResources.Employee e
   INNER JOIN Person.Person p
-  ON p.BusinessEntityID = e.BusinessEntityID
-    INNER JOIN Person.BusinessEntityAddress bea
+    ON p.BusinessEntityID = e.BusinessEntityID
+  INNER JOIN Person.BusinessEntityAddress bea
     ON bea.BusinessEntityID = e.BusinessEntityID
-    INNER JOIN Person.Address a
+  INNER JOIN Person.Address a
     ON a.AddressID = bea.AddressID
-    INNER JOIN Person.StateProvince sp
+  INNER JOIN Person.StateProvince sp
     ON sp.StateProvinceID = a.StateProvinceID
-    INNER JOIN Person.CountryRegion cr
+  INNER JOIN Person.CountryRegion cr
     ON cr.CountryRegionCode = sp.CountryRegionCode
-    LEFT OUTER JOIN Person.PersonPhone pp
+  LEFT OUTER JOIN Person.PersonPhone pp
     ON pp.BusinessEntityID = p.BusinessEntityID
-    LEFT OUTER JOIN Person.PhoneNumberType pnt
+  LEFT OUTER JOIN Person.PhoneNumberType pnt
     ON pp.PhoneNumberTypeID = pnt.PhoneNumberTypeID
-    LEFT OUTER JOIN Person.EmailAddress ea
+  LEFT OUTER JOIN Person.EmailAddress ea
     ON p.BusinessEntityID = ea.BusinessEntityID;
 
 CREATE VIEW HumanResources.vEmployeeDepartment
@@ -2538,10 +2591,10 @@ SELECT
     ,edh.StartDate
 FROM HumanResources.Employee e
   INNER JOIN Person.Person p
-  ON p.BusinessEntityID = e.BusinessEntityID
-    INNER JOIN HumanResources.EmployeeDepartmentHistory edh
+    ON p.BusinessEntityID = e.BusinessEntityID
+  INNER JOIN HumanResources.EmployeeDepartmentHistory edh
     ON e.BusinessEntityID = edh.BusinessEntityID
-    INNER JOIN HumanResources.Department d
+  INNER JOIN HumanResources.Department d
     ON edh.DepartmentID = d.DepartmentID
 WHERE edh.EndDate IS NULL;
 
@@ -2561,12 +2614,12 @@ SELECT
     ,edh.EndDate
 FROM HumanResources.Employee e
   INNER JOIN Person.Person p
-  ON p.BusinessEntityID = e.BusinessEntityID
-    INNER JOIN HumanResources.EmployeeDepartmentHistory edh
+    ON p.BusinessEntityID = e.BusinessEntityID
+  INNER JOIN HumanResources.EmployeeDepartmentHistory edh
     ON e.BusinessEntityID = edh.BusinessEntityID
-    INNER JOIN HumanResources.Department d
+  INNER JOIN HumanResources.Department d
     ON edh.DepartmentID = d.DepartmentID
-    INNER JOIN HumanResources.Shift s
+  INNER JOIN HumanResources.Shift s
     ON s.ShiftID = edh.ShiftID;
 
 CREATE VIEW Sales.vIndividualCustomer
@@ -2591,158 +2644,168 @@ SELECT
     ,cr.Name AS CountryRegionName
     ,p.Demographics
 FROM Person.Person p
-    INNER JOIN Person.BusinessEntityAddress bea
+  INNER JOIN Person.BusinessEntityAddress bea
     ON bea.BusinessEntityID = p.BusinessEntityID
-    INNER JOIN Person.Address a
+  INNER JOIN Person.Address a
     ON a.AddressID = bea.AddressID
-    INNER JOIN Person.StateProvince sp
+  INNER JOIN Person.StateProvince sp
     ON sp.StateProvinceID = a.StateProvinceID
-    INNER JOIN Person.CountryRegion cr
+  INNER JOIN Person.CountryRegion cr
     ON cr.CountryRegionCode = sp.CountryRegionCode
-    INNER JOIN Person.AddressType at
+  INNER JOIN Person.AddressType at
     ON at.AddressTypeID = bea.AddressTypeID
   INNER JOIN Sales.Customer c
-  ON c.PersonID = p.BusinessEntityID
+    ON c.PersonID = p.BusinessEntityID
   LEFT OUTER JOIN Person.EmailAddress ea
-  ON ea.BusinessEntityID = p.BusinessEntityID
+    ON ea.BusinessEntityID = p.BusinessEntityID
   LEFT OUTER JOIN Person.PersonPhone pp
-  ON pp.BusinessEntityID = p.BusinessEntityID
+    ON pp.BusinessEntityID = p.BusinessEntityID
   LEFT OUTER JOIN Person.PhoneNumberType pnt
-  ON pnt.PhoneNumberTypeID = pp.PhoneNumberTypeID
+    ON pnt.PhoneNumberTypeID = pp.PhoneNumberTypeID
 WHERE c.StoreID IS NULL;
 
--- CREATE VIEW [Sales].[vPersonDemographics]
--- AS
--- SELECT
---     p.[BusinessEntityID]
---     ,[IndividualSurvey].[ref].[value](N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey";
---         TotalPurchaseYTD[1]', 'money') AS [TotalPurchaseYTD]
---     ,CONVERT(datetime, REPLACE([IndividualSurvey].[ref].[value](N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey";
---         DateFirstPurchase[1]', 'nvarchar(20)') ,'Z', ''), 101) AS [DateFirstPurchase]
---     ,CONVERT(datetime, REPLACE([IndividualSurvey].[ref].[value](N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey";
---         BirthDate[1]', 'nvarchar(20)') ,'Z', ''), 101) AS [BirthDate]
---     ,[IndividualSurvey].[ref].[value](N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey";
---         MaritalStatus[1]', 'nvarchar(1)') AS [MaritalStatus]
---     ,[IndividualSurvey].[ref].[value](N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey";
---         YearlyIncome[1]', 'nvarchar(30)') AS [YearlyIncome]
---     ,[IndividualSurvey].[ref].[value](N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey";
---         Gender[1]', 'nvarchar(1)') AS [Gender]
---     ,[IndividualSurvey].[ref].[value](N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey";
---         TotalChildren[1]', 'integer') AS [TotalChildren]
---     ,[IndividualSurvey].[ref].[value](N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey";
---         NumberChildrenAtHome[1]', 'integer') AS [NumberChildrenAtHome]
---     ,[IndividualSurvey].[ref].[value](N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey";
---         Education[1]', 'nvarchar(30)') AS [Education]
---     ,[IndividualSurvey].[ref].[value](N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey";
---         Occupation[1]', 'nvarchar(30)') AS [Occupation]
---     ,[IndividualSurvey].[ref].[value](N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey";
---         HomeOwnerFlag[1]', 'bit') AS [HomeOwnerFlag]
---     ,[IndividualSurvey].[ref].[value](N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey";
---         NumberCarsOwned[1]', 'integer') AS [NumberCarsOwned]
--- FROM [Person].[Person] p
--- CROSS APPLY p.[Demographics].nodes(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey";
---     /IndividualSurvey') AS [IndividualSurvey](ref)
--- WHERE [Demographics] IS NOT NULL;
-
--- CREATE VIEW [HumanResources].[vJobCandidate]
--- AS
--- SELECT
---     jc.[JobCandidateID]
---     ,jc.[BusinessEntityID]
---     ,[Resume].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (/Resume/Name/Name.Prefix)[1]', 'nvarchar(30)') AS [Name.Prefix]
---     ,[Resume].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (/Resume/Name/Name.First)[1]', 'nvarchar(30)') AS [Name.First]
---     ,[Resume].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (/Resume/Name/Name.Middle)[1]', 'nvarchar(30)') AS [Name.Middle]
---     ,[Resume].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (/Resume/Name/Name.Last)[1]', 'nvarchar(30)') AS [Name.Last]
---     ,[Resume].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (/Resume/Name/Name.Suffix)[1]', 'nvarchar(30)') AS [Name.Suffix]
---     ,[Resume].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (/Resume/Skills)[1]', 'nvarchar(max)') AS [Skills]
---     ,[Resume].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Address/Addr.Type)[1]', 'nvarchar(30)') AS [Addr.Type]
---     ,[Resume].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Address/Addr.Location/Location/Loc.CountryRegion)[1]', 'nvarchar(100)') AS [Addr.Loc.CountryRegion]
---     ,[Resume].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Address/Addr.Location/Location/Loc.State)[1]', 'nvarchar(100)') AS [Addr.Loc.State]
---     ,[Resume].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Address/Addr.Location/Location/Loc.City)[1]', 'nvarchar(100)') AS [Addr.Loc.City]
---     ,[Resume].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Address/Addr.PostalCode)[1]', 'nvarchar(20)') AS [Addr.PostalCode]
---     ,[Resume].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (/Resume/EMail)[1]', 'nvarchar(max)') AS [EMail]
---     ,[Resume].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (/Resume/WebSite)[1]', 'nvarchar(max)') AS [WebSite]
---     ,jc.[ModifiedDate]
--- FROM [HumanResources].[JobCandidate] jc
--- CROSS APPLY jc.[Resume].nodes(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---     /Resume') AS Resume(ref);
-
--- CREATE VIEW [HumanResources].[vJobCandidateEmployment]
--- AS
--- SELECT
---     jc.[JobCandidateID]
---     ,CONVERT(datetime, REPLACE([Employment].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Emp.StartDate)[1]', 'nvarchar(20)') ,'Z', ''), 101) AS [Emp.StartDate]
---     ,CONVERT(datetime, REPLACE([Employment].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Emp.EndDate)[1]', 'nvarchar(20)') ,'Z', ''), 101) AS [Emp.EndDate]
---     ,[Employment].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Emp.OrgName)[1]', 'nvarchar(100)') AS [Emp.OrgName]
---     ,[Employment].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Emp.JobTitle)[1]', 'nvarchar(100)') AS [Emp.JobTitle]
---     ,[Employment].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Emp.Responsibility)[1]', 'nvarchar(max)') AS [Emp.Responsibility]
---     ,[Employment].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Emp.FunctionCategory)[1]', 'nvarchar(max)') AS [Emp.FunctionCategory]
---     ,[Employment].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Emp.IndustryCategory)[1]', 'nvarchar(max)') AS [Emp.IndustryCategory]
---     ,[Employment].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Emp.Location/Location/Loc.CountryRegion)[1]', 'nvarchar(max)') AS [Emp.Loc.CountryRegion]
---     ,[Employment].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Emp.Location/Location/Loc.State)[1]', 'nvarchar(max)') AS [Emp.Loc.State]
---     ,[Employment].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Emp.Location/Location/Loc.City)[1]', 'nvarchar(max)') AS [Emp.Loc.City]
--- FROM [HumanResources].[JobCandidate] jc
--- CROSS APPLY jc.[Resume].nodes(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---     /Resume/Employment') AS Employment(ref);
-
--- CREATE VIEW [HumanResources].[vJobCandidateEducation]
--- AS
--- SELECT
---     jc.[JobCandidateID]
---     ,[Education].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Edu.Level)[1]', 'nvarchar(max)') AS [Edu.Level]
---     ,CONVERT(datetime, REPLACE([Education].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Edu.StartDate)[1]', 'nvarchar(20)') ,'Z', ''), 101) AS [Edu.StartDate]
---     ,CONVERT(datetime, REPLACE([Education].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Edu.EndDate)[1]', 'nvarchar(20)') ,'Z', ''), 101) AS [Edu.EndDate]
---     ,[Education].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Edu.Degree)[1]', 'nvarchar(50)') AS [Edu.Degree]
---     ,[Education].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Edu.Major)[1]', 'nvarchar(50)') AS [Edu.Major]
---     ,[Education].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Edu.Minor)[1]', 'nvarchar(50)') AS [Edu.Minor]
---     ,[Education].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Edu.GPA)[1]', 'nvarchar(5)') AS [Edu.GPA]
---     ,[Education].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Edu.GPAScale)[1]', 'nvarchar(5)') AS [Edu.GPAScale]
---     ,[Education].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Edu.School)[1]', 'nvarchar(100)') AS [Edu.School]
---     ,[Education].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Edu.Location/Location/Loc.CountryRegion)[1]', 'nvarchar(100)') AS [Edu.Loc.CountryRegion]
---     ,[Education].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Edu.Location/Location/Loc.State)[1]', 'nvarchar(100)') AS [Edu.Loc.State]
---     ,[Education].ref.value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---         (Edu.Location/Location/Loc.City)[1]', 'nvarchar(100)') AS [Edu.Loc.City]
--- FROM [HumanResources].[JobCandidate] jc
--- CROSS APPLY jc.[Resume].nodes(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume";
---     /Resume/Education') AS [Education](ref);
-
-CREATE VIEW Production.vProductAndDescription
+CREATE VIEW Sales.vPersonDemographics
 AS
--- View (indexed or standard) to display products and product descriptions by language.
+SELECT
+    BusinessEntityID
+    ,CAST((xpath('n:TotalPurchaseYTD/text()', Demographics, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey}}'))[1]::VARCHAR AS money)
+            AS TotalPurchaseYTD
+    ,CAST((xpath('n:DateFirstPurchase/text()', Demographics, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey}}'))[1]::VARCHAR AS DATE)
+            AS DateFirstPurchase
+    ,CAST((xpath('n:BirthDate/text()', Demographics, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey}}'))[1]::VARCHAR AS DATE)
+            AS BirthDate
+    ,(xpath('n:MaritalStatus/text()', Demographics, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey}}'))[1]::VARCHAR(1)
+            AS MaritalStatus
+    ,(xpath('n:YearlyIncome/text()', Demographics, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey}}'))[1]::VARCHAR(30)
+            AS YearlyIncome
+    ,(xpath('n:Gender/text()', Demographics, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey}}'))[1]::VARCHAR(1)
+            AS Gender
+    ,CAST((xpath('n:TotalChildren/text()', Demographics, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey}}'))[1]::VARCHAR AS INTEGER)
+            AS TotalChildren
+    ,CAST((xpath('n:NumberChildrenAtHome/text()', Demographics, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey}}'))[1]::VARCHAR AS INTEGER)
+            AS NumberChildrenAtHome
+    ,(xpath('n:Education/text()', Demographics, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey}}'))[1]::VARCHAR(30)
+            AS Education
+    ,(xpath('n:Occupation/text()', Demographics, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey}}'))[1]::VARCHAR(30)
+            AS Occupation
+    ,CAST((xpath('n:HomeOwnerFlag/text()', Demographics, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey}}'))[1]::VARCHAR AS BOOLEAN)
+            AS HomeOwnerFlag
+    ,CAST((xpath('n:NumberCarsOwned/text()', Demographics, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/IndividualSurvey}}'))[1]::VARCHAR AS INTEGER)
+            AS NumberCarsOwned
+FROM Person.Person
+  WHERE Demographics IS NOT NULL;
+
+CREATE VIEW HumanResources.vJobCandidate
+AS
+SELECT
+    JobCandidateID
+    ,BusinessEntityID
+    ,(xpath('/n:Resume/n:Name/n:Name.Prefix/text()', Resume, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))[1]::varchar(30)
+                   AS "Name.Prefix"
+    ,(xpath('/n:Resume/n:Name/n:Name.First/text()', Resume, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))[1]::varchar(30)
+                   AS "Name.First"
+    ,(xpath('/n:Resume/n:Name/n:Name.Middle/text()', Resume, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))[1]::varchar(30)
+                   AS "Name.Middle"
+    ,(xpath('/n:Resume/n:Name/n:Name.Last/text()', Resume, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))[1]::varchar(30)
+                   AS "Name.Last"
+    ,(xpath('/n:Resume/n:Name/n:Name.Suffix/text()', Resume, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))[1]::varchar(30)
+                   AS "Name.Suffix"
+    ,(xpath('/n:Resume/n:Skills/text()', Resume, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))[1]::varchar
+                   AS "Skills"
+    ,(xpath('n:Address/n:Addr.Type/text()', Resume, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))[1]::varchar(30)
+                   AS "Addr.Type"
+    ,(xpath('n:Address/n:Addr.Location/n:Location/n:Loc.CountryRegion/text()', Resume, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))[1]::varchar(100)
+                   AS "Addr.Loc.CountryRegion"
+    ,(xpath('n:Address/n:Addr.Location/n:Location/n:Loc.State/text()', Resume, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))[1]::varchar(100)
+                   AS "Addr.Loc.State"
+    ,(xpath('n:Address/n:Addr.Location/n:Location/n:Loc.City/text()', Resume, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))[1]::varchar(100)
+                   AS "Addr.Loc.City"
+    ,(xpath('n:Address/n:Addr.PostalCode/text()', Resume, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))[1]::varchar(20)
+                   AS "Addr.PostalCode"
+    ,(xpath('/n:Resume/n:EMail/text()', Resume, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))[1]::varchar
+                   AS "EMail"
+    ,(xpath('/n:Resume/n:WebSite/text()', Resume, '{{n,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))[1]::varchar
+                   AS "WebSite"
+    ,ModifiedDate
+FROM HumanResources.JobCandidate;
+
+-- In this case we UNNEST in order to have multiple previous employments listed for
+-- each job candidate.  But there's one caveat in using UNNEST like this when there
+-- are multiple columns:
+-- if any of our Employment fragments were missing something, such as randomly a Emp.FunctionCategory is not there,
+-- then there will be 0 rows returned.  Each Employment element must contain all 10 sub-elements for
+-- this approach to work.  (See the Education example below for an alternate approach!)
+CREATE VIEW HumanResources.vJobCandidateEmployment
+AS
+SELECT
+    JobCandidateID
+    ,CAST(UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.StartDate/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))::VARCHAR(20) AS DATE)
+                                                AS "Emp.StartDate"
+    ,CAST(UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.EndDate/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))::VARCHAR(20) AS DATE)
+                                                AS "Emp.EndDate"
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.OrgName/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+                                                AS "Emp.OrgName"
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.JobTitle/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+                                                AS "Emp.JobTitle"
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.Responsibility/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+                                                AS "Emp.Responsibility"
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.FunctionCategory/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+                                                AS "Emp.FunctionCategory"
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.IndustryCategory/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+                                                AS "Emp.IndustryCategory"
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.Location/ns:Location/ns:Loc.CountryRegion/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+                                                AS "Emp.Loc.CountryRegion"
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.Location/ns:Location/ns:Loc.State/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+                                                AS "Emp.Loc.State"
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.Location/ns:Location/ns:Loc.City/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+                                                AS "Emp.Loc.City"
+  FROM HumanResources.JobCandidate;
+
+-- In this data set, not every listed education has a minor.  (OK, actually none of them do!)
+-- So instead of using multiple UNNEST as above, which would result in 0 rows returned,
+-- we just UNNEST once in a derived table, then convert each XML fragment into a document again
+-- with one <root> element and a shorter namespace for ns:, and finally just use xpath on
+-- all the created documents.
+CREATE VIEW HumanResources.vJobCandidateEducation
+AS
+SELECT
+  jc.JobCandidateID
+  ,(xpath('/root/ns:Education/ns:Edu.Level/text()', jc.doc, '{{ns,http://adventureworks.com}}'))[1]::varchar(50)
+                             AS "Edu.Level"
+  ,CAST((xpath('/root/ns:Education/ns:Edu.StartDate/text()', jc.doc, '{{ns,http://adventureworks.com}}'))[1]::VARCHAR(20) AS DATE)
+                             AS "Edu.StartDate"
+  ,CAST((xpath('/root/ns:Education/ns:Edu.EndDate/text()', jc.doc, '{{ns,http://adventureworks.com}}'))[1]::VARCHAR(20) AS DATE)
+                             AS "Edu.EndDate"
+  ,(xpath('/root/ns:Education/ns:Edu.Degree/text()', jc.doc, '{{ns,http://adventureworks.com}}'))[1]::varchar(50)
+                             AS "Edu.Degree"
+  ,(xpath('/root/ns:Education/ns:Edu.Major/text()', jc.doc, '{{ns,http://adventureworks.com}}'))[1]::varchar(50)
+                             AS "Edu.Major"
+  ,(xpath('/root/ns:Education/ns:Edu.Minor/text()', jc.doc, '{{ns,http://adventureworks.com}}'))[1]::varchar(50)
+                             AS "Edu.Minor"
+  ,(xpath('/root/ns:Education/ns:Edu.GPA/text()', jc.doc, '{{ns,http://adventureworks.com}}'))[1]::varchar(5)
+                             AS "Edu.GPA"
+  ,(xpath('/root/ns:Education/ns:Edu.GPAScale/text()', jc.doc, '{{ns,http://adventureworks.com}}'))[1]::varchar(5)
+                             AS "Edu.GPAScale"
+  ,(xpath('/root/ns:Education/ns:Edu.School/text()', jc.doc, '{{ns,http://adventureworks.com}}'))[1]::varchar(100)
+                             AS "Edu.School"
+  ,(xpath('/root/ns:Education/ns:Edu.Location/ns:Location/ns:Loc.CountryRegion/text()', jc.doc, '{{ns,http://adventureworks.com}}'))[1]::varchar(100)
+                             AS "Edu.Loc.CountryRegion"
+  ,(xpath('/root/ns:Education/ns:Edu.Location/ns:Location/ns:Loc.State/text()', jc.doc, '{{ns,http://adventureworks.com}}'))[1]::varchar(100)
+                             AS "Edu.Loc.State"
+  ,(xpath('/root/ns:Education/ns:Edu.Location/ns:Location/ns:Loc.City/text()', jc.doc, '{{ns,http://adventureworks.com}}'))[1]::varchar(100)
+                             AS "Edu.Loc.City"
+FROM (SELECT JobCandidateID
+    ,('<root xmlns:ns="http://adventureworks.com">' ||
+      unnesting.Education::varchar ||
+      '</root>')::xml AS doc
+  FROM (SELECT JobCandidateID
+      ,UNNEST(xpath('/ns:Resume/ns:Education', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}')) AS Education
+    FROM HumanResources.JobCandidate) AS unnesting) AS jc;
+
+-- Products and product descriptions by language.
+-- We're making this a materialized view so that performance can be better.
+CREATE MATERIALIZED VIEW Production.vProductAndDescription
+AS
 SELECT
     p.ProductID
     ,p.Name
@@ -2758,90 +2821,86 @@ FROM Production.Product p
     ON pmx.ProductDescriptionID = pd.ProductDescriptionID;
 
 -- Index the vProductAndDescription view
--- CREATE UNIQUE CLUSTERED INDEX [IX_vProductAndDescription] ON [Production].[vProductAndDescription]([CultureID], [ProductID]);
+CREATE UNIQUE INDEX IX_vProductAndDescription ON Production.vProductAndDescription(CultureID, ProductID);
+CLUSTER Production.vProductAndDescription USING IX_vProductAndDescription;
+-- Note that with a materialized view, changes to the underlying tables will
+-- not change the contents of the view.  In order to maintain the index, if there
+-- are changes to any of the 4 tables then you would need to run:
+--   REFRESH MATERIALIZED VIEW Production.vProductAndDescription;
 
--- CREATE VIEW [Production].[vProductModelCatalogDescription]
--- AS
--- SELECT
---     [ProductModelID]
---     ,[Name]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         declare namespace html="http://www.w3.org/1999/xhtml";
---         (/p1:ProductDescription/p1:Summary/html:p)[1]', 'nvarchar(max)') AS [Summary]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         (/p1:ProductDescription/p1:Manufacturer/p1:Name)[1]', 'nvarchar(max)') AS [Manufacturer]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         (/p1:ProductDescription/p1:Manufacturer/p1:Copyright)[1]', 'nvarchar(30)') AS [Copyright]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         (/p1:ProductDescription/p1:Manufacturer/p1:ProductURL)[1]', 'nvarchar(256)') AS [ProductURL]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         declare namespace wm="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelWarrAndMain";
---         (/p1:ProductDescription/p1:Features/wm:Warranty/wm:WarrantyPeriod)[1]', 'nvarchar(256)') AS [WarrantyPeriod]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         declare namespace wm="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelWarrAndMain";
---         (/p1:ProductDescription/p1:Features/wm:Warranty/wm:Description)[1]', 'nvarchar(256)') AS [WarrantyDescription]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         declare namespace wm="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelWarrAndMain";
---         (/p1:ProductDescription/p1:Features/wm:Maintenance/wm:NoOfYears)[1]', 'nvarchar(256)') AS [NoOfYears]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         declare namespace wm="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelWarrAndMain";
---         (/p1:ProductDescription/p1:Features/wm:Maintenance/wm:Description)[1]', 'nvarchar(256)') AS [MaintenanceDescription]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         declare namespace wf="http://www.adventure-works.com/schemas/OtherFeatures";
---         (/p1:ProductDescription/p1:Features/wf:wheel)[1]', 'nvarchar(256)') AS [Wheel]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         declare namespace wf="http://www.adventure-works.com/schemas/OtherFeatures";
---         (/p1:ProductDescription/p1:Features/wf:saddle)[1]', 'nvarchar(256)') AS [Saddle]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         declare namespace wf="http://www.adventure-works.com/schemas/OtherFeatures";
---         (/p1:ProductDescription/p1:Features/wf:pedal)[1]', 'nvarchar(256)') AS [Pedal]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         declare namespace wf="http://www.adventure-works.com/schemas/OtherFeatures";
---         (/p1:ProductDescription/p1:Features/wf:BikeFrame)[1]', 'nvarchar(max)') AS [BikeFrame]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         declare namespace wf="http://www.adventure-works.com/schemas/OtherFeatures";
---         (/p1:ProductDescription/p1:Features/wf:crankset)[1]', 'nvarchar(256)') AS [Crankset]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         (/p1:ProductDescription/p1:Picture/p1:Angle)[1]', 'nvarchar(256)') AS [PictureAngle]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         (/p1:ProductDescription/p1:Picture/p1:Size)[1]', 'nvarchar(256)') AS [PictureSize]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         (/p1:ProductDescription/p1:Picture/p1:ProductPhotoID)[1]', 'nvarchar(256)') AS [ProductPhotoID]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         (/p1:ProductDescription/p1:Specifications/Material)[1]', 'nvarchar(256)') AS [Material]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         (/p1:ProductDescription/p1:Specifications/Color)[1]', 'nvarchar(256)') AS [Color]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         (/p1:ProductDescription/p1:Specifications/ProductLine)[1]', 'nvarchar(256)') AS [ProductLine]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         (/p1:ProductDescription/p1:Specifications/Style)[1]', 'nvarchar(256)') AS [Style]
---     ,[CatalogDescription].value(N'declare namespace p1="http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription";
---         (/p1:ProductDescription/p1:Specifications/RiderExperience)[1]', 'nvarchar(1024)') AS [RiderExperience]
---     ,[rowguid]
---     ,[ModifiedDate]
--- FROM [Production].[ProductModel]
--- WHERE [CatalogDescription] IS NOT NULL;
+CREATE VIEW Production.vProductModelCatalogDescription
+AS
+SELECT
+  ProductModelID
+  ,Name
+  ,(xpath('/p1:ProductDescription/p1:Summary/html:p/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription},{html,http://www.w3.org/1999/xhtml}}'))[1]::varchar
+                                 AS "Summary"
+  ,(xpath('/p1:ProductDescription/p1:Manufacturer/p1:Name/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription}}' ))[1]::varchar
+                                  AS Manufacturer
+  ,(xpath('/p1:ProductDescription/p1:Manufacturer/p1:Copyright/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription}}' ))[1]::varchar(30)
+                                                  AS Copyright
+  ,(xpath('/p1:ProductDescription/p1:Manufacturer/p1:ProductURL/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription}}' ))[1]::varchar(256)
+                                                  AS ProductURL
+  ,(xpath('/p1:ProductDescription/p1:Features/wm:Warranty/wm:WarrantyPeriod/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription},{wm,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelWarrAndMain}}' ))[1]::varchar(256)
+                                                          AS WarrantyPeriod
+  ,(xpath('/p1:ProductDescription/p1:Features/wm:Warranty/wm:Description/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription},{wm,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelWarrAndMain}}' ))[1]::varchar(256)
+                                                          AS WarrantyDescription
+  ,(xpath('/p1:ProductDescription/p1:Features/wm:Maintenance/wm:NoOfYears/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription},{wm,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelWarrAndMain}}' ))[1]::varchar(256)
+                                                             AS NoOfYears
+  ,(xpath('/p1:ProductDescription/p1:Features/wm:Maintenance/wm:Description/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription},{wm,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelWarrAndMain}}' ))[1]::varchar(256)
+                                                             AS MaintenanceDescription
+  ,(xpath('/p1:ProductDescription/p1:Features/wf:wheel/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription},{wf,http://www.adventure-works.com/schemas/OtherFeatures}}'))[1]::varchar(256)
+                                              AS Wheel
+  ,(xpath('/p1:ProductDescription/p1:Features/wf:saddle/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription},{wf,http://www.adventure-works.com/schemas/OtherFeatures}}'))[1]::varchar(256)
+                                              AS Saddle
+  ,(xpath('/p1:ProductDescription/p1:Features/wf:pedal/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription},{wf,http://www.adventure-works.com/schemas/OtherFeatures}}'))[1]::varchar(256)
+                                              AS Pedal
+  ,(xpath('/p1:ProductDescription/p1:Features/wf:BikeFrame/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription},{wf,http://www.adventure-works.com/schemas/OtherFeatures}}'))[1]::varchar
+                                              AS BikeFrame
+  ,(xpath('/p1:ProductDescription/p1:Features/wf:crankset/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription},{wf,http://www.adventure-works.com/schemas/OtherFeatures}}'))[1]::varchar(256)
+                                              AS Crankset
+  ,(xpath('/p1:ProductDescription/p1:Picture/p1:Angle/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription}}' ))[1]::varchar(256)
+                                             AS PictureAngle
+  ,(xpath('/p1:ProductDescription/p1:Picture/p1:Size/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription}}' ))[1]::varchar(256)
+                                             AS PictureSize
+  ,(xpath('/p1:ProductDescription/p1:Picture/p1:ProductPhotoID/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription}}' ))[1]::varchar(256)
+                                             AS ProductPhotoID
+  ,(xpath('/p1:ProductDescription/p1:Specifications/Material/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription}}' ))[1]::varchar(256)
+                                                 AS Material
+  ,(xpath('/p1:ProductDescription/p1:Specifications/Color/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription}}' ))[1]::varchar(256)
+                                                 AS Color
+  ,(xpath('/p1:ProductDescription/p1:Specifications/ProductLine/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription}}' ))[1]::varchar(256)
+                                                 AS ProductLine
+  ,(xpath('/p1:ProductDescription/p1:Specifications/Style/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription}}' ))[1]::varchar(256)
+                                                 AS Style
+  ,(xpath('/p1:ProductDescription/p1:Specifications/RiderExperience/text()', CatalogDescription, '{{p1,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelDescription}}' ))[1]::varchar(1024)
+                                                 AS RiderExperience
+  ,rowguid
+  ,ModifiedDate
+FROM Production.ProductModel
+WHERE CatalogDescription IS NOT NULL;
 
--- CREATE VIEW [Production].[vProductModelInstructions]
--- AS
+-- -- CREATE VIEW [Production].[vProductModelInstructions]
+-- -- AS
 -- SELECT
---     [ProductModelID]
---     ,[Name]
---     ,[Instructions].value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelManuInstructions";
---         (/root/text())[1]', 'nvarchar(max)') AS [Instructions]
---     ,[MfgInstructions].ref.value('@LocationID[1]', 'int') AS [LocationID]
---     ,[MfgInstructions].ref.value('@SetupHours[1]', 'decimal(9, 4)') AS [SetupHours]
---     ,[MfgInstructions].ref.value('@MachineHours[1]', 'decimal(9, 4)') AS [MachineHours]
---     ,[MfgInstructions].ref.value('@LaborHours[1]', 'decimal(9, 4)') AS [LaborHours]
---     ,[MfgInstructions].ref.value('@LotSize[1]', 'int') AS [LotSize]
---     ,[Steps].ref.value('string(.)[1]', 'nvarchar(1024)') AS [Step]
---     ,[rowguid]
---     ,[ModifiedDate]
--- FROM [Production].[ProductModel]
--- CROSS APPLY [Instructions].nodes(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelManuInstructions";
---     /root/Location') MfgInstructions(ref)
--- CROSS APPLY [MfgInstructions].ref.nodes('declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelManuInstructions";
---     step') Steps(ref);
+--     ProductModelID
+--     ,Name
+--     ,Instructions
+-- --     ,[Instructions].value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelManuInstructions";
+-- --         (/root/text())[1]', 'nvarchar(max)') AS [Instructions]
+-- --     ,[MfgInstructions].ref.value('@LocationID[1]', 'int') AS [LocationID]
+-- --     ,[MfgInstructions].ref.value('@SetupHours[1]', 'decimal(9, 4)') AS [SetupHours]
+-- --     ,[MfgInstructions].ref.value('@MachineHours[1]', 'decimal(9, 4)') AS [MachineHours]
+-- --     ,[MfgInstructions].ref.value('@LaborHours[1]', 'decimal(9, 4)') AS [LaborHours]
+-- --     ,[MfgInstructions].ref.value('@LotSize[1]', 'int') AS [LotSize]
+-- --     ,[Steps].ref.value('string(.)[1]', 'nvarchar(1024)') AS [Step]
+-- --     ,[rowguid]
+-- --     ,[ModifiedDate]
+-- FROM Production.ProductModel;
+-- -- CROSS APPLY [Instructions].nodes(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelManuInstructions";
+-- --     /root/Location') MfgInstructions(ref)
+-- -- CROSS APPLY [MfgInstructions].ref.nodes('declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelManuInstructions";
+-- --     step') Steps(ref);
 
 CREATE VIEW Sales.vSalesPerson
 AS
@@ -2869,26 +2928,26 @@ SELECT
     ,s.SalesYTD
     ,s.SalesLastYear
 FROM Sales.SalesPerson s
-    INNER JOIN HumanResources.Employee e
+  INNER JOIN HumanResources.Employee e
     ON e.BusinessEntityID = s.BusinessEntityID
   INNER JOIN Person.Person p
-  ON p.BusinessEntityID = s.BusinessEntityID
-    INNER JOIN Person.BusinessEntityAddress bea
+    ON p.BusinessEntityID = s.BusinessEntityID
+  INNER JOIN Person.BusinessEntityAddress bea
     ON bea.BusinessEntityID = s.BusinessEntityID
-    INNER JOIN Person.Address a
+  INNER JOIN Person.Address a
     ON a.AddressID = bea.AddressID
-    INNER JOIN Person.StateProvince sp
+  INNER JOIN Person.StateProvince sp
     ON sp.StateProvinceID = a.StateProvinceID
-    INNER JOIN Person.CountryRegion cr
+  INNER JOIN Person.CountryRegion cr
     ON cr.CountryRegionCode = sp.CountryRegionCode
-    LEFT OUTER JOIN Sales.SalesTerritory st
+  LEFT OUTER JOIN Sales.SalesTerritory st
     ON st.TerritoryID = s.TerritoryID
   LEFT OUTER JOIN Person.EmailAddress ea
-  ON ea.BusinessEntityID = p.BusinessEntityID
+    ON ea.BusinessEntityID = p.BusinessEntityID
   LEFT OUTER JOIN Person.PersonPhone pp
-  ON pp.BusinessEntityID = p.BusinessEntityID
+    ON pp.BusinessEntityID = p.BusinessEntityID
   LEFT OUTER JOIN Person.PhoneNumberType pnt
-  ON pnt.PhoneNumberTypeID = pp.PhoneNumberTypeID;
+    ON pnt.PhoneNumberTypeID = pp.PhoneNumberTypeID;
 
 -- CREATE VIEW [Sales].[vSalesPersonSalesByFiscalYears]
 -- AS
@@ -2924,7 +2983,7 @@ FROM Sales.SalesPerson s
 --     IN ([2002], [2003], [2004])
 -- ) AS pvt;
 
-CREATE VIEW Person.vStateProvinceCountryRegion
+CREATE MATERIALIZED VIEW Person.vStateProvinceCountryRegion
 AS
 SELECT
     sp.StateProvinceID
@@ -2938,36 +2997,40 @@ FROM Person.StateProvince sp
     INNER JOIN Person.CountryRegion cr
     ON sp.CountryRegionCode = cr.CountryRegionCode;
 
--- Index the vStateProvinceCountryRegion view
--- CREATE UNIQUE CLUSTERED INDEX [IX_vStateProvinceCountryRegion] ON [Person].[vStateProvinceCountryRegion]([StateProvinceID], [CountryRegionCode]);
+CREATE UNIQUE INDEX IX_vStateProvinceCountryRegion ON Person.vStateProvinceCountryRegion(StateProvinceID, CountryRegionCode);
+CLUSTER Person.vStateProvinceCountryRegion USING IX_vStateProvinceCountryRegion;
+-- If there are changes to either of these tables, this should be run to update the view:
+--   REFRESH MATERIALIZED VIEW Production.vStateProvinceCountryRegion;
 
--- CREATE VIEW [Sales].[vStoreWithDemographics] AS
--- SELECT
---     s.[BusinessEntityID]
---     ,s.[Name]
---     ,s.[Demographics].value('declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey";
---         (/StoreSurvey/AnnualSales)[1]', 'money') AS [AnnualSales]
---     ,s.[Demographics].value('declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey";
---         (/StoreSurvey/AnnualRevenue)[1]', 'money') AS [AnnualRevenue]
---     ,s.[Demographics].value('declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey";
---         (/StoreSurvey/BankName)[1]', 'nvarchar(50)') AS [BankName]
---     ,s.[Demographics].value('declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey";
---         (/StoreSurvey/BusinessType)[1]', 'nvarchar(5)') AS [BusinessType]
---     ,s.[Demographics].value('declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey";
---         (/StoreSurvey/YearOpened)[1]', 'integer') AS [YearOpened]
---     ,s.[Demographics].value('declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey";
---         (/StoreSurvey/Specialty)[1]', 'nvarchar(50)') AS [Specialty]
---     ,s.[Demographics].value('declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey";
---         (/StoreSurvey/SquareFeet)[1]', 'integer') AS [SquareFeet]
---     ,s.[Demographics].value('declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey";
---         (/StoreSurvey/Brands)[1]', 'nvarchar(30)') AS [Brands]
---     ,s.[Demographics].value('declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey";
---         (/StoreSurvey/Internet)[1]', 'nvarchar(30)') AS [Internet]
---     ,s.[Demographics].value('declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey";
---         (/StoreSurvey/NumberEmployees)[1]', 'integer') AS [NumberEmployees]
--- FROM [Sales].[Store] s;
+CREATE VIEW Sales.vStoreWithDemographics
+AS
+SELECT
+    BusinessEntityID
+    ,Name
+    ,CAST(UNNEST(xpath('/ns:StoreSurvey/ns:AnnualSales/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar AS money)
+                                  AS "AnnualSales"
+    ,CAST(UNNEST(xpath('/ns:StoreSurvey/ns:AnnualRevenue/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar AS money)
+                                  AS "AnnualRevenue"
+    ,UNNEST(xpath('/ns:StoreSurvey/ns:BankName/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar(50)
+                                  AS "BankName"
+    ,UNNEST(xpath('/ns:StoreSurvey/ns:BusinessType/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar(5)
+                                  AS "BusinessType"
+    ,CAST(UNNEST(xpath('/ns:StoreSurvey/ns:YearOpened/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar AS integer)
+                                  AS "YearOpened"
+    ,UNNEST(xpath('/ns:StoreSurvey/ns:Specialty/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar(50)
+                                  AS "Specialty"
+    ,CAST(UNNEST(xpath('/ns:StoreSurvey/ns:SquareFeet/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar AS integer)
+                                  AS "SquareFeet"
+    ,UNNEST(xpath('/ns:StoreSurvey/ns:Brands/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar(30)
+                                  AS "Brands"
+    ,UNNEST(xpath('/ns:StoreSurvey/ns:Internet/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar(30)
+                                  AS "Internet"
+    ,CAST(UNNEST(xpath('/ns:StoreSurvey/ns:NumberEmployees/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar AS integer)
+                                  AS "NumberEmployees"
+FROM Sales.Store;
 
-CREATE VIEW Sales.vStoreWithContacts AS
+CREATE VIEW Sales.vStoreWithContacts
+AS
 SELECT
     s.BusinessEntityID
     ,s.Name
@@ -2982,20 +3045,21 @@ SELECT
     ,ea.EmailAddress
     ,p.EmailPromotion
 FROM Sales.Store s
-    INNER JOIN Person.BusinessEntityContact bec
+  INNER JOIN Person.BusinessEntityContact bec
     ON bec.BusinessEntityID = s.BusinessEntityID
   INNER JOIN Person.ContactType ct
-  ON ct.ContactTypeID = bec.ContactTypeID
+    ON ct.ContactTypeID = bec.ContactTypeID
   INNER JOIN Person.Person p
-  ON p.BusinessEntityID = bec.PersonID
+    ON p.BusinessEntityID = bec.PersonID
   LEFT OUTER JOIN Person.EmailAddress ea
-  ON ea.BusinessEntityID = p.BusinessEntityID
+    ON ea.BusinessEntityID = p.BusinessEntityID
   LEFT OUTER JOIN Person.PersonPhone pp
-  ON pp.BusinessEntityID = p.BusinessEntityID
+    ON pp.BusinessEntityID = p.BusinessEntityID
   LEFT OUTER JOIN Person.PhoneNumberType pnt
-  ON pnt.PhoneNumberTypeID = pp.PhoneNumberTypeID;
+    ON pnt.PhoneNumberTypeID = pp.PhoneNumberTypeID;
 
-CREATE VIEW Sales.vStoreWithAddresses AS
+CREATE VIEW Sales.vStoreWithAddresses
+AS
 SELECT
     s.BusinessEntityID
     ,s.Name
@@ -3007,18 +3071,19 @@ SELECT
     ,a.PostalCode
     ,cr.Name AS CountryRegionName
 FROM Sales.Store s
-    INNER JOIN Person.BusinessEntityAddress bea
+  INNER JOIN Person.BusinessEntityAddress bea
     ON bea.BusinessEntityID = s.BusinessEntityID
-    INNER JOIN Person.Address a
+  INNER JOIN Person.Address a
     ON a.AddressID = bea.AddressID
-    INNER JOIN Person.StateProvince sp
+  INNER JOIN Person.StateProvince sp
     ON sp.StateProvinceID = a.StateProvinceID
-    INNER JOIN Person.CountryRegion cr
+  INNER JOIN Person.CountryRegion cr
     ON cr.CountryRegionCode = sp.CountryRegionCode
-    INNER JOIN Person.AddressType at
+  INNER JOIN Person.AddressType at
     ON at.AddressTypeID = bea.AddressTypeID;
 
-CREATE VIEW Purchasing.vVendorWithContacts AS
+CREATE VIEW Purchasing.vVendorWithContacts
+AS
 SELECT
     v.BusinessEntityID
     ,v.Name
@@ -3033,20 +3098,21 @@ SELECT
     ,ea.EmailAddress
     ,p.EmailPromotion
 FROM Purchasing.Vendor v
-    INNER JOIN Person.BusinessEntityContact bec
+  INNER JOIN Person.BusinessEntityContact bec
     ON bec.BusinessEntityID = v.BusinessEntityID
   INNER JOIN Person.ContactType ct
-  ON ct.ContactTypeID = bec.ContactTypeID
+    ON ct.ContactTypeID = bec.ContactTypeID
   INNER JOIN Person.Person p
-  ON p.BusinessEntityID = bec.PersonID
+    ON p.BusinessEntityID = bec.PersonID
   LEFT OUTER JOIN Person.EmailAddress ea
-  ON ea.BusinessEntityID = p.BusinessEntityID
+    ON ea.BusinessEntityID = p.BusinessEntityID
   LEFT OUTER JOIN Person.PersonPhone pp
-  ON pp.BusinessEntityID = p.BusinessEntityID
+    ON pp.BusinessEntityID = p.BusinessEntityID
   LEFT OUTER JOIN Person.PhoneNumberType pnt
-  ON pnt.PhoneNumberTypeID = pp.PhoneNumberTypeID;
+    ON pnt.PhoneNumberTypeID = pp.PhoneNumberTypeID;
 
-CREATE VIEW Purchasing.vVendorWithAddresses AS
+CREATE VIEW Purchasing.vVendorWithAddresses
+AS
 SELECT
     v.BusinessEntityID
     ,v.Name
@@ -3058,15 +3124,15 @@ SELECT
     ,a.PostalCode
     ,cr.Name AS CountryRegionName
 FROM Purchasing.Vendor v
-    INNER JOIN Person.BusinessEntityAddress bea
+  INNER JOIN Person.BusinessEntityAddress bea
     ON bea.BusinessEntityID = v.BusinessEntityID
-    INNER JOIN Person.Address a
+  INNER JOIN Person.Address a
     ON a.AddressID = bea.AddressID
-    INNER JOIN Person.StateProvince sp
+  INNER JOIN Person.StateProvince sp
     ON sp.StateProvinceID = a.StateProvinceID
-    INNER JOIN Person.CountryRegion cr
+  INNER JOIN Person.CountryRegion cr
     ON cr.CountryRegionCode = sp.CountryRegionCode
-    INNER JOIN Person.AddressType at
+  INNER JOIN Person.AddressType at
     ON at.AddressTypeID = bea.AddressTypeID;
 
 
@@ -3151,6 +3217,7 @@ CREATE SCHEMA sa
   CREATE VIEW s AS SELECT businessentityid AS id, * FROM sales.store
 ;
 
+\pset tuples_only off
 
 
 

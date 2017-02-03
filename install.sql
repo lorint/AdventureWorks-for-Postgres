@@ -17,10 +17,27 @@
 --   psql -d Adventureworks < install.sql
 
 -- All 68 tables are properly set up.
--- As well, 18 of the 20 views are established.  The two that are not built are:
---   vProductModelInstructions         (somewhat complex XML example)
---   vSalesPersonSalesByFiscalYears    (demonstrates use of PIVOT)
--- The next version of this script will include these two views, and thus be complete.
+-- All 20 views are established.
+-- 68 additional convenience views are added which:
+--   * Provide a shorthand to refer to tables.
+--   * Add an "id" column to a primary key or primary-ish key if it makes sense.
+--
+--   For example, with the convenience views you can simply do:
+--       SELECT pe.p.firstname, hr.e.jobtitle
+--       FROM pe.p
+--         INNER JOIN hr.e ON pe.p.id = hr.e.id;
+--   Instead of:
+--       SELECT p.firstname, e.jobtitle
+--       FROM person.person AS p
+--         INNER JOIN humanresources.employee AS e ON p.businessentityid = e.businessentityid;
+--
+-- Schemas for these views:
+--   pe = person
+--   hr = humanresources
+--   pr = production
+--   pu = purchasing
+--   sa = sales
+-- Easily get a list of all of these with:  \dv (pe|hr|pr|pu|sa).*
 
 -- Enjoy!
 
@@ -34,6 +51,9 @@
 
 -- Support to auto-generate UUIDs (aka GUIDs)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Support crosstab function to do PIVOT thing for Sales.vSalesPersonSalesByFiscalYears
+CREATE EXTENSION tablefunc;
 
 -------------------------------------
 -- Custom data types
@@ -670,7 +690,7 @@ Attention to detail is apparent in every aspect from the frame finish to the car
 The designers clearly did their homework and thought about size, weight, and funtionality throughout. And at less than 19 pounds, the bike is manageable for even the most petite cyclist.
 
 We had 5 riders take the bike out for a spin and really put it to the test. The results were consistent and very positive. Our testers loved the manuverability 
-and control they had with the redesigned frame on the 550-W. A definite improvement over the 2002 design. Four out of five testers listed quick handling
+and control they had with the redesigned frame on the 550-W. A definite improvement over the 2012 design. Four out of five testers listed quick handling
 and responsivness were the key elements they noticed. Technical climbing and on the flats, the bike just cruises through the rough. Tight corners and obstacles were handled effortlessly. The fifth tester was more impressed with the smooth ride. The heavy-duty shocks absorbed even the worst bumps and provided a soft ride on all but the 
 nastiest trails and biggest drops. The shifting was rated superb and typical of what we''ve come to expect from Adventure Works Cycles. On descents, the bike handled flawlessly and tracked very well. The bike is well balanced front-to-rear and frame flex was minimal. In particular, the testers
 noted that the brake system had a unique combination of power and modulation.  While some brake setups can be overly touchy, these brakes had a good
@@ -2439,8 +2459,8 @@ ALTER TABLE Production.WorkOrderRouting ADD
 -- VIEWS
 -------------------------------------
 
--- -- Fun to see the difference with XML-oriented queries.
--- -- First here's an original MSSQL query:
+-- Fun to see the difference in XML-oriented queries between MSSQLServer and Postgres.
+-- First here's an original MSSQL query:
 
 -- CREATE VIEW [Person].[vAdditionalContactInfo]
 -- AS
@@ -2491,7 +2511,7 @@ ALTER TABLE Production.WorkOrderRouting ADD
 -- WHERE [AdditionalContactInfo] IS NOT NULL;
 
 
--- And now the Postgres version, which is a little more tidy:
+-- And now the Postgres version, which is a little more trim:
 
 CREATE VIEW Person.vAdditionalContactInfo
 AS
@@ -2537,6 +2557,7 @@ FROM Person.Person AS p
     WHERE AdditionalContactInfo IS NOT NULL) AS additional
   ON p.BusinessEntityID = additional.BusinessEntityID;
 
+
 CREATE VIEW HumanResources.vEmployee
 AS
 SELECT
@@ -2576,6 +2597,7 @@ FROM HumanResources.Employee e
   LEFT OUTER JOIN Person.EmailAddress ea
     ON p.BusinessEntityID = ea.BusinessEntityID;
 
+
 CREATE VIEW HumanResources.vEmployeeDepartment
 AS
 SELECT
@@ -2597,6 +2619,7 @@ FROM HumanResources.Employee e
   INNER JOIN HumanResources.Department d
     ON edh.DepartmentID = d.DepartmentID
 WHERE edh.EndDate IS NULL;
+
 
 CREATE VIEW HumanResources.vEmployeeDepartmentHistory
 AS
@@ -2621,6 +2644,7 @@ FROM HumanResources.Employee e
     ON edh.DepartmentID = d.DepartmentID
   INNER JOIN HumanResources.Shift s
     ON s.ShiftID = edh.ShiftID;
+
 
 CREATE VIEW Sales.vIndividualCustomer
 AS
@@ -2664,6 +2688,7 @@ FROM Person.Person p
     ON pnt.PhoneNumberTypeID = pp.PhoneNumberTypeID
 WHERE c.StoreID IS NULL;
 
+
 CREATE VIEW Sales.vPersonDemographics
 AS
 SELECT
@@ -2694,6 +2719,7 @@ SELECT
             AS NumberCarsOwned
 FROM Person.Person
   WHERE Demographics IS NOT NULL;
+
 
 CREATE VIEW HumanResources.vJobCandidate
 AS
@@ -2729,12 +2755,14 @@ SELECT
     ,ModifiedDate
 FROM HumanResources.JobCandidate;
 
+
 -- In this case we UNNEST in order to have multiple previous employments listed for
--- each job candidate.  But there's one caveat in using UNNEST like this when there
--- are multiple columns:
--- if any of our Employment fragments were missing something, such as randomly a Emp.FunctionCategory is not there,
--- then there will be 0 rows returned.  Each Employment element must contain all 10 sub-elements for
--- this approach to work.  (See the Education example below for an alternate approach!)
+-- each job candidate.  But things become very brittle when using UNNEST like this,
+-- with multiple columns...
+-- ... if any of our Employment fragments were missing something, such as randomly a
+-- Emp.FunctionCategory is not there, then there will be 0 rows returned.  Each
+-- Employment element must contain all 10 sub-elements for this approach to work.
+-- (See the Education example below for a better alternate approach!)
 CREATE VIEW HumanResources.vJobCandidateEmployment
 AS
 SELECT
@@ -2743,25 +2771,26 @@ SELECT
                                                 AS "Emp.StartDate"
     ,CAST(UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.EndDate/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))::VARCHAR(20) AS DATE)
                                                 AS "Emp.EndDate"
-    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.OrgName/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.OrgName/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))::varchar(100)
                                                 AS "Emp.OrgName"
-    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.JobTitle/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.JobTitle/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))::varchar(100)
                                                 AS "Emp.JobTitle"
-    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.Responsibility/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.Responsibility/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))::varchar
                                                 AS "Emp.Responsibility"
-    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.FunctionCategory/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.FunctionCategory/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))::varchar
                                                 AS "Emp.FunctionCategory"
-    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.IndustryCategory/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.IndustryCategory/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))::varchar
                                                 AS "Emp.IndustryCategory"
-    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.Location/ns:Location/ns:Loc.CountryRegion/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.Location/ns:Location/ns:Loc.CountryRegion/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))::varchar
                                                 AS "Emp.Loc.CountryRegion"
-    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.Location/ns:Location/ns:Loc.State/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.Location/ns:Location/ns:Loc.State/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))::varchar
                                                 AS "Emp.Loc.State"
-    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.Location/ns:Location/ns:Loc.City/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))
+    ,UNNEST(xpath('/ns:Resume/ns:Employment/ns:Emp.Location/ns:Location/ns:Loc.City/text()', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}'))::varchar
                                                 AS "Emp.Loc.City"
   FROM HumanResources.JobCandidate;
 
--- In this data set, not every listed education has a minor.  (OK, actually none of them do!)
+
+-- In this data set, not every listed education has a minor.  (OK, actually NONE of them do!)
 -- So instead of using multiple UNNEST as above, which would result in 0 rows returned,
 -- we just UNNEST once in a derived table, then convert each XML fragment into a document again
 -- with one <root> element and a shorter namespace for ns:, and finally just use xpath on
@@ -2795,12 +2824,17 @@ SELECT
   ,(xpath('/root/ns:Education/ns:Edu.Location/ns:Location/ns:Loc.City/text()', jc.doc, '{{ns,http://adventureworks.com}}'))[1]::varchar(100)
                              AS "Edu.Loc.City"
 FROM (SELECT JobCandidateID
+    -- Because the underlying XML data used in this example has namespaces defined at the document level,
+    -- when we take individual fragments using UNNEST then each fragment has no idea of the namespaces.
+    -- So here each fragment gets turned back into its own document with a root element that defines a
+    -- simpler thing for "ns" since this will only be used only in the xpath queries above.
     ,('<root xmlns:ns="http://adventureworks.com">' ||
       unnesting.Education::varchar ||
       '</root>')::xml AS doc
   FROM (SELECT JobCandidateID
       ,UNNEST(xpath('/ns:Resume/ns:Education', Resume, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/Resume}}')) AS Education
     FROM HumanResources.JobCandidate) AS unnesting) AS jc;
+
 
 -- Products and product descriptions by language.
 -- We're making this a materialized view so that performance can be better.
@@ -2827,6 +2861,7 @@ CLUSTER Production.vProductAndDescription USING IX_vProductAndDescription;
 -- not change the contents of the view.  In order to maintain the index, if there
 -- are changes to any of the 4 tables then you would need to run:
 --   REFRESH MATERIALIZED VIEW Production.vProductAndDescription;
+
 
 CREATE VIEW Production.vProductModelCatalogDescription
 AS
@@ -2880,27 +2915,36 @@ SELECT
 FROM Production.ProductModel
 WHERE CatalogDescription IS NOT NULL;
 
--- -- CREATE VIEW [Production].[vProductModelInstructions]
--- -- AS
--- SELECT
---     ProductModelID
---     ,Name
---     ,Instructions
--- --     ,[Instructions].value(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelManuInstructions";
--- --         (/root/text())[1]', 'nvarchar(max)') AS [Instructions]
--- --     ,[MfgInstructions].ref.value('@LocationID[1]', 'int') AS [LocationID]
--- --     ,[MfgInstructions].ref.value('@SetupHours[1]', 'decimal(9, 4)') AS [SetupHours]
--- --     ,[MfgInstructions].ref.value('@MachineHours[1]', 'decimal(9, 4)') AS [MachineHours]
--- --     ,[MfgInstructions].ref.value('@LaborHours[1]', 'decimal(9, 4)') AS [LaborHours]
--- --     ,[MfgInstructions].ref.value('@LotSize[1]', 'int') AS [LotSize]
--- --     ,[Steps].ref.value('string(.)[1]', 'nvarchar(1024)') AS [Step]
--- --     ,[rowguid]
--- --     ,[ModifiedDate]
--- FROM Production.ProductModel;
--- -- CROSS APPLY [Instructions].nodes(N'declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelManuInstructions";
--- --     /root/Location') MfgInstructions(ref)
--- -- CROSS APPLY [MfgInstructions].ref.nodes('declare default element namespace "http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelManuInstructions";
--- --     step') Steps(ref);
+
+-- Instructions have many locations, and locations have many steps
+CREATE VIEW Production.vProductModelInstructions
+AS
+SELECT
+    pm.ProductModelID
+    ,pm.Name
+    -- Access the overall Instructions xml brought through from %line 2938 and %line 2943
+    ,(xpath('/ns:root/text()', pm.Instructions, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelManuInstructions}}'))[1]::varchar AS Instructions
+    -- Bring out information about the location, broken out in %line 2945
+    ,CAST((xpath('@LocationID', pm.MfgInstructions))[1]::varchar AS INTEGER) AS "LocationID"
+    ,CAST((xpath('@SetupHours', pm.MfgInstructions))[1]::varchar AS DECIMAL(9, 4)) AS "SetupHours"
+    ,CAST((xpath('@MachineHours', pm.MfgInstructions))[1]::varchar AS DECIMAL(9, 4)) AS "MachineHours"
+    ,CAST((xpath('@LaborHours', pm.MfgInstructions))[1]::varchar AS DECIMAL(9, 4)) AS "LaborHours"
+    ,CAST((xpath('@LotSize', pm.MfgInstructions))[1]::varchar AS INTEGER) AS "LotSize"
+    -- Show specific detail about each step broken out in %line 2940
+    ,(xpath('/step/text()', pm.Step))[1]::varchar(1024) AS "Step"
+    ,pm.rowguid
+    ,pm.ModifiedDate
+FROM (SELECT locations.ProductModelID, locations.Name, locations.rowguid, locations.ModifiedDate
+    ,locations.Instructions, locations.MfgInstructions
+    -- Further break out the location information from the inner query below into individual steps
+    ,UNNEST(xpath('step', locations.MfgInstructions)) AS Step
+  FROM (SELECT
+      -- Just pass these through so they can be referenced at the outermost query
+      ProductModelID, Name, rowguid, ModifiedDate, Instructions
+      -- And also break out Instructions into individual locations to pass up to the middle query
+      ,UNNEST(xpath('/ns:root/ns:Location', Instructions, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/ProductModelManuInstructions}}')) AS MfgInstructions
+    FROM Production.ProductModel) AS locations) AS pm;
+
 
 CREATE VIEW Sales.vSalesPerson
 AS
@@ -2949,39 +2993,66 @@ FROM Sales.SalesPerson s
   LEFT OUTER JOIN Person.PhoneNumberType pnt
     ON pnt.PhoneNumberTypeID = pp.PhoneNumberTypeID;
 
--- CREATE VIEW [Sales].[vSalesPersonSalesByFiscalYears]
--- AS
--- SELECT
---     pvt.[SalesPersonID]
---     ,pvt.[FullName]
---     ,pvt.[JobTitle]
---     ,pvt.[SalesTerritory]
---     ,pvt.[2002]
---     ,pvt.[2003]
---     ,pvt.[2004]
--- FROM (SELECT
---         soh.[SalesPersonID]
---         ,p.[FirstName] + ' ' + COALESCE(p.[MiddleName], '') + ' ' + p.[LastName] AS [FullName]
---         ,e.[JobTitle]
---         ,st.[Name] AS [SalesTerritory]
---         ,soh.[SubTotal]
---         ,YEAR(DATEADD(m, 6, soh.[OrderDate])) AS [FiscalYear]
---     FROM [Sales].[SalesPerson] sp
---         INNER JOIN [Sales].[SalesOrderHeader] soh
---         ON sp.[BusinessEntityID] = soh.[SalesPersonID]
---         INNER JOIN [Sales].[SalesTerritory] st
---         ON sp.[TerritoryID] = st.[TerritoryID]
---         INNER JOIN [HumanResources].[Employee] e
---         ON soh.[SalesPersonID] = e.[BusinessEntityID]
---     INNER JOIN [Person].[Person] p
---     ON p.[BusinessEntityID] = sp.[BusinessEntityID]
---    ) AS soh
--- PIVOT
--- (
---     SUM([SubTotal])
---     FOR [FiscalYear]
---     IN ([2002], [2003], [2004])
--- ) AS pvt;
+
+-- This view provides the aggregated data that gets used in the PIVOTed view below
+CREATE VIEW Sales.vSalesPersonSalesByFiscalYearsData
+AS
+-- Of the 56 possible combinations of one of the 14 SalesPersons selling across one of
+-- 4 FiscalYears, here we end up with 48 rows of aggregated data (since some sales people
+-- were hired and started working in FY2012 or FY2013).
+SELECT granular.SalesPersonID, granular.FullName, granular.JobTitle, granular.SalesTerritory, SUM(granular.SubTotal) AS SalesTotal, granular.FiscalYear
+FROM
+-- Brings back 3703 rows of data -- there are 3806 total sales done by a SalesPerson,
+-- of which 103 do not have any sales territory.  This is fed into the outer GROUP BY
+-- which results in 48 aggregated rows of sales data.
+  (SELECT
+      soh.SalesPersonID
+      ,p.FirstName || ' ' || COALESCE(p.MiddleName || ' ', '') || p.LastName AS FullName
+      ,e.JobTitle
+      ,st.Name AS SalesTerritory
+      ,soh.SubTotal
+      ,EXTRACT(YEAR FROM soh.OrderDate + '6 months'::interval) AS FiscalYear
+  FROM Sales.SalesPerson sp
+    INNER JOIN Sales.SalesOrderHeader soh
+      ON sp.BusinessEntityID = soh.SalesPersonID
+    INNER JOIN Sales.SalesTerritory st
+      ON sp.TerritoryID = st.TerritoryID
+    INNER JOIN HumanResources.Employee e
+      ON soh.SalesPersonID = e.BusinessEntityID
+    INNER JOIN Person.Person p
+      ON p.BusinessEntityID = sp.BusinessEntityID
+  ) AS granular
+GROUP BY granular.SalesPersonID, granular.FullName, granular.JobTitle, granular.SalesTerritory, granular.FiscalYear;
+
+-- Note that this PIVOT query originally refered to years 2002-2004, which jived with
+-- earlier versions of the AdventureWorks data.  Somewhere along the way all the dates
+-- were cranked forward by exactly a decade, but this view wasn't updated, effectively
+-- breaking it.  The hard-coded fiscal years below fix this issue.
+
+-- Current sales data ranges from May 31, 2011 through June 30, 2014, so there's one
+-- month of fiscal year 2011 data, but mostly FY 2012 through 2014.
+
+-- This query properly shows no data for three of our sales people in 2012,
+-- as they were hired during FY 2013.
+CREATE VIEW Sales.vSalesPersonSalesByFiscalYears
+AS
+SELECT * FROM crosstab(
+'SELECT
+    SalesPersonID
+    ,FullName
+    ,JobTitle
+    ,SalesTerritory
+    ,FiscalYear
+    ,SalesTotal
+FROM Sales.vSalesPersonSalesByFiscalYearsData
+ORDER BY 2,4'
+-- This set of fiscal years could have dynamically come from a SELECT DISTINCT,
+-- but we wanted to omit 2011 and also ...
+,$$SELECT unnest('{2012,2013,2014}'::text[])$$)
+-- ... still the FiscalYear values have to be hard-coded here.
+AS SalesTotal ("SalesPersonID" integer, "FullName" text, "JobTitle" text, "SalesTerritory" text,
+ "2012" DECIMAL(12, 4), "2013" DECIMAL(12, 4), "2014" DECIMAL(12, 4));
+
 
 CREATE MATERIALIZED VIEW Person.vStateProvinceCountryRegion
 AS
@@ -3002,32 +3073,34 @@ CLUSTER Person.vStateProvinceCountryRegion USING IX_vStateProvinceCountryRegion;
 -- If there are changes to either of these tables, this should be run to update the view:
 --   REFRESH MATERIALIZED VIEW Production.vStateProvinceCountryRegion;
 
+
 CREATE VIEW Sales.vStoreWithDemographics
 AS
 SELECT
     BusinessEntityID
     ,Name
     ,CAST(UNNEST(xpath('/ns:StoreSurvey/ns:AnnualSales/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar AS money)
-                                  AS "AnnualSales"
+                                       AS "AnnualSales"
     ,CAST(UNNEST(xpath('/ns:StoreSurvey/ns:AnnualRevenue/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar AS money)
-                                  AS "AnnualRevenue"
+                                       AS "AnnualRevenue"
     ,UNNEST(xpath('/ns:StoreSurvey/ns:BankName/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar(50)
                                   AS "BankName"
     ,UNNEST(xpath('/ns:StoreSurvey/ns:BusinessType/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar(5)
                                   AS "BusinessType"
     ,CAST(UNNEST(xpath('/ns:StoreSurvey/ns:YearOpened/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar AS integer)
-                                  AS "YearOpened"
+                                       AS "YearOpened"
     ,UNNEST(xpath('/ns:StoreSurvey/ns:Specialty/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar(50)
                                   AS "Specialty"
     ,CAST(UNNEST(xpath('/ns:StoreSurvey/ns:SquareFeet/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar AS integer)
-                                  AS "SquareFeet"
+                                       AS "SquareFeet"
     ,UNNEST(xpath('/ns:StoreSurvey/ns:Brands/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar(30)
                                   AS "Brands"
     ,UNNEST(xpath('/ns:StoreSurvey/ns:Internet/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar(30)
                                   AS "Internet"
     ,CAST(UNNEST(xpath('/ns:StoreSurvey/ns:NumberEmployees/text()', Demographics, '{{ns,http://schemas.microsoft.com/sqlserver/2004/07/adventure-works/StoreSurvey}}'))::varchar AS integer)
-                                  AS "NumberEmployees"
+                                       AS "NumberEmployees"
 FROM Sales.Store;
+
 
 CREATE VIEW Sales.vStoreWithContacts
 AS
@@ -3058,6 +3131,7 @@ FROM Sales.Store s
   LEFT OUTER JOIN Person.PhoneNumberType pnt
     ON pnt.PhoneNumberTypeID = pp.PhoneNumberTypeID;
 
+
 CREATE VIEW Sales.vStoreWithAddresses
 AS
 SELECT
@@ -3081,6 +3155,7 @@ FROM Sales.Store s
     ON cr.CountryRegionCode = sp.CountryRegionCode
   INNER JOIN Person.AddressType at
     ON at.AddressTypeID = bea.AddressTypeID;
+
 
 CREATE VIEW Purchasing.vVendorWithContacts
 AS
@@ -3110,6 +3185,7 @@ FROM Purchasing.Vendor v
     ON pp.BusinessEntityID = p.BusinessEntityID
   LEFT OUTER JOIN Person.PhoneNumberType pnt
     ON pnt.PhoneNumberTypeID = pp.PhoneNumberTypeID;
+
 
 CREATE VIEW Purchasing.vVendorWithAddresses
 AS

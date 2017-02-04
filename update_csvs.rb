@@ -18,9 +18,30 @@
 #   psql -c "CREATE DATABASE \"Adventureworks\";"
 #   psql -d Adventureworks < install.sql
 
-# Production.ProductReview gets omitted, but the remaining 67 tables are properly set up.
-# As well, 11 of the 20 views are established.  The ones not built are those that rely on
-# XML functions like value and ref.
+# (you may need to also add:  -U postgres  to the above two commands)
+
+# All 68 tables are properly set up.
+# All 20 views are established.
+# 68 additional convenience views are added which:
+#   * Provide a shorthand to refer to tables.
+#   * Add an "id" column to a primary key or primary-ish key if it makes sense.
+
+#   For example, with the convenience views you can simply do:
+#       SELECT pe.p.firstname, hr.e.jobtitle
+#       FROM pe.p
+#         INNER JOIN hr.e ON pe.p.id = hr.e.id;
+#   Instead of:
+#       SELECT p.firstname, e.jobtitle
+#       FROM person.person AS p
+#         INNER JOIN humanresources.employee AS e ON p.businessentityid = e.businessentityid;
+
+# Schemas for these views:
+#   pe = person
+#   hr = humanresources
+#   pr = production
+#   pu = purchasing
+#   sa = sales
+# Easily get a list of all of these in psql with:  \dv (pe|hr|pr|pu|sa).*
 
 # Enjoy!
 
@@ -31,7 +52,6 @@ Dir.glob('./*.csv') do |csv_file|
   text = ""
   is_needed=false
   is_first = true
-  is_plus_pipe = false
   is_pipes = false
   begin
   f.each do |line|
@@ -50,7 +70,8 @@ Dir.glob('./*.csv') do |csv_file|
       if line.strip.end_with?("&|")
         text << line.gsub(/\"/, "\"\"").strip[0..-3]
         output << text.split("+|").map { |part|
-          part.include?("\t") ? '"' + part + '"' : part
+          (part[1] == "<" && part[-1] == ">") ? '"' + part[1..-1] + '"' :
+          (part.include?("\t") ? '"' + part + '"' : part)
         }.join("\t")
         output << "\n"
         text = ""

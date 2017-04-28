@@ -1,0 +1,8 @@
+version: '2'
+services:
+  db:
+    build: ./
+    environment:
+      POSTGRES_USER: docker
+      POSTGRES_PASSWORD: docker
+      POSTGRES_DB: Adventureworks

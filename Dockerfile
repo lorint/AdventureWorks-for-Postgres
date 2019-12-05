@@ -14,4 +14,5 @@ RUN cd /data && \
     rm update_csvs.rb
 
 COPY install.sh /docker-entrypoint-initdb.d/
+WORKDIR /data/
 RUN dos2unix /docker-entrypoint-initdb.d/*.sh

@@ -14,8 +14,7 @@ primary and foreign keys, and create some of the views used by Adventureworks.
 
 ## How to set up the database:
 
-Download [Adventure Works 2014 OLTP Script](https://msftdbprodsamples.codeplex.com/downloads/get/880662).
-(If this link becomes broken then here's the [original page](https://msftdbprodsamples.codeplex.com/releases/view/125550).)
+Download [Adventure Works 2014 OLTP Script](https://github.com/Microsoft/sql-server-samples/releases/download/adventureworks/AdventureWorks-oltp-install-script.zip).
 
 Extract the .zip and copy all of the CSV files into the same folder, also containing update_csvs.rb file and install.sql.
 

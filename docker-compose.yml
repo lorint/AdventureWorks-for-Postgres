@@ -5,5 +5,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      DOCKER_USER: docker
+      DOCKER_PASSWORD: docker
     ports:
       - '5432:5432'

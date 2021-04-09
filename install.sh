@@ -2,7 +2,7 @@
 
 export PGUSER=postgres
 psql <<- SHELL
-  CREATE USER docker;
+  CREATE USER docker WITH PASSWORD '$DOCKER_PASSWORD';
   CREATE DATABASE "Adventureworks";
   GRANT ALL PRIVILEGES ON DATABASE "Adventureworks" TO docker;
 SHELL

@@ -112,7 +112,7 @@ CREATE SCHEMA Person
     City varchar(30) NOT NULL,
     StateProvinceID INT NOT NULL,
     PostalCode varchar(15) NOT NULL,
-    SpatialLocation varchar(44) NULL,
+    SpatialLocation bytea NULL,
     rowguid uuid NOT NULL CONSTRAINT "DF_Address_rowguid" DEFAULT (uuid_generate_v1()), -- ROWGUIDCOL
     ModifiedDate TIMESTAMP NOT NULL CONSTRAINT "DF_Address_ModifiedDate" DEFAULT (NOW())
   )

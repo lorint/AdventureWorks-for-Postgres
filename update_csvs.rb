@@ -47,10 +47,13 @@
 
 
 Dir.glob('./*.csv') do |csv_file|
-  f = File.open(csv_file, "rb:UTF-16LE:utf-8")
+  f = if (is_needed = csv_file.end_with?('/Address.csv'))
+        File.open(csv_file, "rb:WINDOWS-1252:UTF-8")
+      else
+        File.open(csv_file, "rb:UTF-16LE:UTF-8")
+      end
   output = ""
   text = ""
-  is_needed=false
   is_first = true
   is_pipes = false
   begin
@@ -68,7 +71,9 @@ Dir.glob('./*.csv') do |csv_file|
     break if !is_needed
     if is_pipes
       if line.strip.end_with?("&|")
-        text << line.gsub(/\"/, "\"\"").strip[0..-3]
+        text << line.gsub("|474946383961", "|\\\\x474946383961") # For GIF data
+                    .gsub(/\"/, "\"\"")
+                    .strip[0..-3]
         output << text.split("+|").map { |part|
           (part[1] == "<" && part[-1] == ">") ? '"' + part[1..-1] + '"' :
           (part.include?("\t") ? '"' + part + '"' : part)
@@ -79,8 +84,9 @@ Dir.glob('./*.csv') do |csv_file|
         text << line.gsub(/\"/, "\"\"").gsub("\r\n", "\\n")
       end
     else
-      # The last gsub makes everything compatible with Windows -- change \r\n into just \n
-      output << line.gsub(/\"/, "\"\"").gsub(/\&\|\n/, "\n").gsub(/\&\|\r\n/, "\n").gsub(/\r\n/, "\n")
+      output << line.gsub(/\"/, "\"\"").gsub(/\&\|\n/, "\n").gsub(/\&\|\r\n/, "\n")
+                    .gsub("\tE6100000010C", "\t\\\\xE6100000010C") # For geospatial data
+                    .gsub(/\r\n/, "\n") # Make everything compatible with Windows -- change \r\n into just \n
     end
   end
   if is_needed

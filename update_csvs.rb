@@ -6,7 +6,7 @@
 # How to use this file:
 
 # Download "Adventure Works 2014 OLTP Script" from:
-#   https://msftdbprodsamples.codeplex.com/downloads/get/880662
+#   https://github.com/Microsoft/sql-server-samples/releases/download/adventureworks/AdventureWorks-oltp-install-script.zip
 
 # Extract the .zip and copy all of the CSV files into the same folder containing
 # this update_csvs.rb file and the install.sql file.

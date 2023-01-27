@@ -3293,6 +3293,17 @@ CREATE SCHEMA sa
   CREATE VIEW s AS SELECT businessentityid AS id, * FROM sales.store
 ;
 
+-- Ensure that Perry Skountrianos' change for Türkiye is implemented properly if it was intended
+-- https://github.com/microsoft/sql-server-samples/commit/cca0f1920e3bec5b9cef97e1fdc32b6883526581
+-- Fix any messed up one if such a thing exists and is not proper unicode
+UPDATE person.countryregion SET name='T' || U&'\00FC' || 'rkiye' WHERE name='Türkiye';
+-- Optionally you can uncomment this to update "Turkey" to the unicode-appropriate rendition of "Türkiye"
+-- UPDATE person.countryregion SET name='T' || U&'\00FC' || 'rkiye' WHERE name='Turkey';
+
+-- If you intend to use this data with The Brick (or some other Rails project) then you may want
+-- to rename the "class" column in Production.Product so it does not interfere with Ruby's reserved
+-- keyword "class":
+-- ALTER TABLE production.product RENAME COLUMN class TO class_;
 \pset tuples_only off
 
 

@@ -37,7 +37,17 @@ All 68 tables are properly set up, and 11 of the 20 views are established.  The 
 
 ## Using with Docker
 
-You can spin up a new database using **Docker** with `docker-compose up`.
+You can spin up a new database using **Docker** with `docker-compose up`. There is a helper script at `./run_docker.sh` that will download necessary files, build the image, and run the container. The database will be available on port 5432. Use the following environment variables to configure the database:
+
+```sh
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=Adventureworks
+POSTGRES_PORT=5432
+POSTGRES_HOST=localhost
+
+POSTGRES_URL="postgresql://postgres:postgres@127.0.0.1/Adventureworks"
+```
 
 _You will need to rename the Adventure Works 2014 OLTP Script archive to **adventure_works_2014_OLTP_script.zip** to get this to work!_
 
@@ -69,7 +79,7 @@ this to help people learn a new environment.
 
 As well, with the imminent release of SQL Server 2017 for Linux, this sample could be used to
 evaluate performance differences between Postgres and SQL 2017.  Never thought I'd see the day that
-MS SQL got compiled for Linux, but alas, here we are. 
+MS SQL got compiled for Linux, but alas, here we are.
 
 Let's keep coding fun.
 

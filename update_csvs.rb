@@ -45,8 +45,13 @@
 
 # Enjoy!
 
+input_path = ARGV.size > 0 ? ARGV[0] : "."
 
-Dir.glob('./*.csv') do |csv_file|
+Dir.glob(input_path + '/*.csv') do |csv_file|
+
+  base_name = File.basename(csv_file)
+  output_filename = File.join(input_path, base_name + '.tmp')
+
   f = if (is_needed = csv_file.end_with?('/Address.csv'))
         File.open(csv_file, "rb:WINDOWS-1252:UTF-8")
       else
@@ -92,11 +97,11 @@ Dir.glob('./*.csv') do |csv_file|
   if is_needed
     puts "Processing #{csv_file}"
     f.close
-    w = File.open(csv_file + ".xyz", "w")
+    w = File.open(output_filename, "w")
     w.write(output)
     w.close
     File.delete(csv_file)
-    File.rename(csv_file + ".xyz", csv_file)
+    File.rename(output_filename, csv_file)
   end
 
   # Here's a list of files that get snagged here:

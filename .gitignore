@@ -1,1 +1,5 @@
 *.zip
+.csvs
+
+# this one is auto-generated
+create_db.sql

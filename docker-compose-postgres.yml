@@ -1,0 +1,25 @@
+services:
+
+  db:
+    image: "${POSTGRES_IMAGE}"
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - database:/var/lib/postgresql/data
+    networks:
+      - database
+    ports:
+      - 5432:5432
+
+volumes:
+  database:
+    external: true
+    name: "${DB_DOCKER_VOLUME}"
+
+networks:
+  database:
+    external: true
+    name: "${DB_DOCKER_NETWORK}"

@@ -28,6 +28,7 @@ ${SOURCE_CSV_DIR}/csvs_are_converted: ${SOURCE_CSV_DIR}
 ###################################
 
 DB_DOCKER_NETWORK?=database
+DB_DOCKER_VOLUME?=adventure_works_data
 
 .PHONY: ensure_db_network_exists
 ensure_db_network_exists:
@@ -40,11 +41,15 @@ ensure_db_volume_exists:
 .PHONY: db_start
 db_start: ensure_db_network_exists ensure_db_volume_exists
 	POSTGRES_IMAGE=${POSTGRES_IMAGE} \
+	DB_DOCKER_VOLUME=${DB_DOCKER_VOLUME} \
+	DB_DOCKER_NETWORK=${DB_DOCKER_NETWORK} \
 	${DOCKER_COMMAND} compose -f docker-compose-postgres.yml up -d
 
 .PHONY: db_stop
 db_stop:
 	POSTGRES_IMAGE=${POSTGRES_IMAGE} \
+	DB_DOCKER_VOLUME=${DB_DOCKER_VOLUME} \
+	DB_DOCKER_NETWORK=${DB_DOCKER_NETWORK} \
 	${DOCKER_COMMAND} compose -f docker-compose-postgres.yml down
 
 # used only for PSQL client to talk to the DB server
@@ -109,5 +114,4 @@ clean: clean
 .PHONY: clean-db
 clean-db:
 	@echo "Ensure DB is stopped ('make db_stop')"
-	docker container prune -f
-	docker volume rm adventureworks-for-postgres_adventure_works_data
+	docker volume rm ${DB_DOCKER_VOLUME}

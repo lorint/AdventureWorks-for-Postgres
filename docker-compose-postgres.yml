@@ -1,25 +1,25 @@
-version: '3.1'
-
 services:
 
   db:
-    image: ${POSTGRES_IMAGE}
+    image: "${POSTGRES_IMAGE}"
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - adventure_works_data:/var/lib/postgresql/data
+      - database:/var/lib/postgresql/data
     networks:
       - database
     ports:
       - 5432:5432
 
 volumes:
-  adventure_works_data:
+  database:
     external: true
+    name: "${DB_DOCKER_VOLUME}"
 
 networks:
   database:
     external: true
+    name: "${DB_DOCKER_NETWORK}"

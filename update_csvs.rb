@@ -47,52 +47,78 @@
 
 
 Dir.glob('./*.csv') do |csv_file|
-  f = if (is_needed = csv_file.end_with?('/Address.csv'))
-        File.open(csv_file, "rb:WINDOWS-1252:UTF-8")
-      else
-        File.open(csv_file, "rb:UTF-16LE:UTF-8")
-      end
+  is_needed = false
+  f = File.open(csv_file, "rb:UTF-8:UTF-8")
+
   output = ""
   text = ""
   is_first = true
   is_pipes = false
+  is_cleaning = false
+
   begin
   f.each do |line|
     if is_first
       if line.include?("+|")
         is_pipes = true
+        is_needed = true
+        is_cleaning = true
       end
       if line[0] == "\uFEFF"
         line = line[1..-1]
         is_needed = true
       end
+      if line.include?("&|") || line.include?("\tE6100000010C")
+        is_needed = true
+        is_cleaning = true
+      end
     end
     is_first = false
     break if !is_needed
+
     if is_pipes
-      if line.strip.end_with?("&|")
-        text << line.gsub("|474946383961", "|\\\\x474946383961") # For GIF data
-                    .gsub(/\"/, "\"\"")
-                    .strip[0..-3]
-        output << text.split("+|").map { |part|
+      line = line.gsub("|474946383961", "|\\\\x474946383961") # For GIF data
+                 .gsub(/\"/, "\"\"")
+
+      while (end_index = line.index("&|"))
+        text << line[0...end_index].strip
+
+        output << text.split("+|").each_with_index.map { |part, part_index|
+          # Some hierarchyid values in the newer UTF-8 files can contain
+          # an actual NUL character. PostgreSQL text cannot store NULs,
+          # and the later SQL conversion expects hex text.
+          if part_index == 0 && part == "\u0000"
+            part = "00"
+          else
+            part = part.delete("\u0000")
+          end
+
+          (part[0] == "<" && part[-1] == ">") ? '"' + part + '"' :
           (part[1] == "<" && part[-1] == ">") ? '"' + part[1..-1] + '"' :
           (part.include?("\t") ? '"' + part + '"' : part)
         }.join("\t")
+
         output << "\n"
         text = ""
-      else
-        text << line.gsub(/\"/, "\"\"").gsub("\r\n", "\\n")
+        line = line[(end_index + 2)..-1] || ""
       end
+
+      text << line.gsub(/\r?\n/, "\\n") unless line.strip.empty?
     else
-      output << line.gsub(/\"/, "\"\"").gsub(/\&\|\n/, "\n").gsub(/\&\|\r\n/, "\n")
-                    .gsub("\tE6100000010C", "\t\\\\xE6100000010C") # For geospatial data
-                    .gsub(/\r\n/, "\n") # Make everything compatible with Windows -- change \r\n into just \n
+      if is_cleaning
+        output << line.gsub(/\"/, "\"\"").gsub(/\&\|\n/, "\n").gsub(/\&\|\r\n/, "\n")
+                      .gsub("\tE6100000010C", "\t\\\\xE6100000010C") # For geospatial data
+                      .gsub(/\r\n/, "\n") # Make everything compatible with Windows -- change \r\n into just \n
+      else
+        output << line
+      end
     end
   end
+
   if is_needed
     puts "Processing #{csv_file}"
     f.close
-    w = File.open(csv_file + ".xyz", "w")
+    w = File.open(csv_file + ".xyz", "w:UTF-8")
     w.write(output)
     w.close
     File.delete(csv_file)
@@ -101,25 +127,20 @@ Dir.glob('./*.csv') do |csv_file|
 
   # Here's a list of files that get snagged here:
   #    Address.csv
-  #    AWBuildVersion.csv
-  #    CreditCard.csv
-  #    Culture.csv
-  #    Currency.csv
-  #    Department.csv
-  #    EmployeeDepartmentHistory.csv
-  #    EmployeePayHistory.csv
-  #    Product.csv
-  #    ProductCostHistory.csv
-  #    ProductModelIllustration.csv
-  #    ProductReview.csv
-  #    SalesOrderDetail.csv
-  #    SalesTerritory.csv
-  #    Shift.csv
-  #    ShipMethod.csv
-  #    ShoppingCartItem.csv
-  #    SpecialOffer.csv
-  #    Vendor.csv
-  #    WorkOrder.csv
+  #    BusinessEntity.csv
+  #    BusinessEntityAddress.csv
+  #    BusinessEntityContact.csv
+  #    Document.csv
+  #    EmailAddress.csv
+  #    Illustration.csv
+  #    JobCandidate.csv
+  #    Password.csv
+  #    Person.csv
+  #    PersonPhone.csv
+  #    PhoneNumberType.csv
+  #    ProductModel.csv
+  #    ProductPhoto.csv
+  #    Store.csv
   rescue Encoding::InvalidByteSequenceError
     f.close
   end

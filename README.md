@@ -35,6 +35,18 @@ All 68 tables are properly set up, and 11 of the 20 views are established.  The 
 \dt (humanresources|person|production|purchasing|sales).*
 ```
 
+## Example query
+
+Once the data is loaded, try this to see the top 5 products by quantity sold:
+```
+SELECT p.name, SUM(d.orderqty) AS total_qty
+FROM sales.salesorderdetail d
+JOIN production.product p ON p.productid = d.productid
+GROUP BY p.name
+ORDER BY total_qty DESC
+LIMIT 5;
+```
+
 ## Using with Docker
 
 You can spin up a new database using **Docker** with `docker-compose up`.
